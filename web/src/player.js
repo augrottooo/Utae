@@ -39,7 +39,7 @@ export function createPlayer({ songs, cache, decoder }) {
   $('song-select').value = awaitingSong ? '' : lesson.id;
   $('song-select').disabled = !!linkedSong;
   document.documentElement.classList.toggle('single-song', !!linkedSong);
-  document.title = awaitingSong ? 'Sorane Player · 歌词练习' : lesson.title + ' · 歌词练习';
+  document.title = awaitingSong ? 'Utae（唱吧）· 歌词练习' : lesson.title + ' · 歌词练习';
   const { renderTranslation, renderNextLine, renderJapanese, displayRomaji } = createLyricsView({
     current: () => lines[state.index],
     next: () => (state.segment && state.index >= state.rangeEnd ? null : lines[state.index + 1]),

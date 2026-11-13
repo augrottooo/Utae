@@ -1,4 +1,14 @@
-# Sorane Player
+# Utae（唱吧）
+
+Utae 是面向日语歌曲精听与发音练习的工具，以 [Sorane Player](https://github.com/SuperJuice666/sorane-player) 为播放器基础进行二次开发。
+
+当前仓库保留上游播放器、构建工具、文档、Git 历史及版权声明。上游基线为 `15bb3bb7dd05430af18120bfbc1ef2558322308b`；仓库切换与版本信息见 [切换记录](docs/utae-repository-switch.md)。
+
+本地目录为 `C:\Users\hj\Projects\utae`，旧版项目保留于 `C:\Users\hj\Projects\utae-legacy`。当前提供歌曲包播放能力，用户上传、Vue 重建、Java 后端、学习记录与 Agent 属于后续规划。
+
+以下保留上游使用说明；其中 Sorane 演示链接指向上游站点，运行示例按上游目录名称书写。本地使用时进入当前 Utae 目录。歌曲制作由独立的 Sorane Studio 负责。
+
+## 上游 Sorane Player 使用说明
 
 [更新日志](CHANGELOG.md)
 
