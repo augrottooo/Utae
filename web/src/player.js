@@ -4,15 +4,37 @@ import { createPlaybackTransport } from './audio/transport.js';
 import { createLyricsView } from './lyrics.js';
 import { balanceLyrics } from './layout.js';
 import { lineVariant } from './timeline.js';
-export function createPlayer({ songs, cache, decoder }) {
+export function createPlayer({ songs, cache, decoder, root = document, songId }) {
+  if (!Array.isArray(songs) || !songs.length) throw new TypeError('A song catalog is required');
+  const doc = root.ownerDocument || root;
+  const page = root === doc ? doc.documentElement : root;
+  const subscriptions = new Set(), removers = [], options = [];
+  const viewEvents = new AbortController();
+  let disposed = false, notificationPending = false, initialized = false;
+  function listen(target, type, listener, config) {
+    const guarded = (event) => { if (!disposed) listener(event); };
+    target.addEventListener(type, guarded, config);
+    removers.push(() => target.removeEventListener(type, guarded, config));
+  }
+  function notify() {
+    if (disposed || notificationPending) return;
+    notificationPending = true;
+    queueMicrotask(() => {
+      notificationPending = false;
+      if (disposed || !initialized) return;
+      for (const listener of subscriptions) {
+        try { listener(getSnapshot()); } catch (error) { console.error('Player subscriber failed', error); }
+      }
+    });
+  }
   const availableLibrary = songs;
-  let requestedSongId = null;
+  let requestedSongId = songId ?? null;
   try {
-    requestedSongId = new URLSearchParams(window.location.search).get('song');
+    if (songId === undefined) requestedSongId = new URLSearchParams(window.location.search).get('song');
   } catch {}
   const linkedSong = availableLibrary.find((song) => song.id === requestedSongId),
     library = linkedSong ? [linkedSong] : availableLibrary;
-  const $ = (id) => document.getElementById(id),
+  const $ = (id) => root === doc ? doc.getElementById(id) : root.querySelector(`[id="${id}"]`),
     media = $('audio'),
     vocalMixer = createVocalMixer(media),
     audio = createPlaybackTransport({
@@ -31,16 +53,18 @@ export function createPlayer({ songs, cache, decoder }) {
 
   const preferenceKey = () => 'lyrics-practice-' + lesson.id;
   for (const song of library) {
-    const option = document.createElement('option');
+    const option = doc.createElement('option');
     option.value = song.id;
     option.textContent = song.title + ' · ' + song.artist;
     $('song-select').append(option);
+    options.push(option);
   }
   $('song-select').value = awaitingSong ? '' : lesson.id;
   $('song-select').disabled = !!linkedSong;
-  document.documentElement.classList.toggle('single-song', !!linkedSong);
-  document.title = awaitingSong ? 'Utae（唱吧）· 歌词练习' : lesson.title + ' · 歌词练习';
+  page.classList.toggle('single-song', !!linkedSong);
+  if (root === doc) doc.title = awaitingSong ? 'Utae（唱吧）· 歌词练习' : lesson.title + ' · 歌词练习';
   const { renderTranslation, renderNextLine, renderJapanese, displayRomaji } = createLyricsView({
+    root, eventSignal: viewEvents.signal,
     current: () => lines[state.index],
     next: () => (state.segment && state.index >= state.rangeEnd ? null : lines[state.index + 1]),
   });
@@ -51,6 +75,7 @@ export function createPlayer({ songs, cache, decoder }) {
     playIntent = false,
     scrubbing = false,
     mediaWaiting = false;
+  let repeat = true;
   const state = {
     index: 0,
     mode: 'song',
@@ -78,7 +103,7 @@ export function createPlayer({ songs, cache, decoder }) {
     $('vocal-volume').setAttribute('aria-valuetext', vocalVolume + '%');
   }
   updateVocalVolume();
-  $('vocal-volume').addEventListener('input', () => {
+  listen($('vocal-volume'), 'input', () => {
     vocalVolume = Number($('vocal-volume').value);
     updateVocalVolume();
     try {
@@ -96,6 +121,7 @@ export function createPlayer({ songs, cache, decoder }) {
   let playbackError = false,
     loadingPhase = '';
   function renderLoadingStatus() {
+    notify();
     if (playbackError) {
       $('play').setAttribute('data-play-state', 'retry');
       $('play-label').textContent = '重试';
@@ -182,6 +208,7 @@ export function createPlayer({ songs, cache, decoder }) {
     }
   } catch {}
   const directory = createDirectory({
+    root, eventSignal: viewEvents.signal,
     context: () => ({
       lines,
       index: state.index,
@@ -213,12 +240,12 @@ export function createPlayer({ songs, cache, decoder }) {
     const line = lines[state.index];
     $('tokens').replaceChildren();
     for (const token of line.tokens) {
-      const word = document.createElement('div');
+      const word = doc.createElement('div');
       word.className = 'word';
-      const jp = document.createElement('span');
+      const jp = doc.createElement('span');
       jp.className = 'jp';
       renderJapanese(jp, token);
-      const roma = document.createElement('span');
+      const roma = doc.createElement('span');
       roma.className = 'romaji';
       roma.textContent = displayRomaji(token);
       word.append(jp, roma);
@@ -232,7 +259,7 @@ export function createPlayer({ songs, cache, decoder }) {
     $('next').disabled = state.index >= (state.segment ? state.rangeEnd : lines.length - 1);
     renderDirectoryCurrent();
     renderSelection();
-    balanceLyrics($('tokens'));
+    balanceLyrics($('tokens'), $('next-tokens'));
   }
   function renderSelection() {
     if (awaitingSong) {
@@ -250,7 +277,7 @@ export function createPlayer({ songs, cache, decoder }) {
         (id === 'prev' && state.index <= (state.segment ? state.rangeStart : 0)) ||
         (id === 'next' && state.index >= (state.segment ? state.rangeEnd : lines.length - 1));
     for (const selector of ['[data-read-speed]', '[data-song-speed]'])
-      document.querySelectorAll(selector).forEach((b) => (b.disabled = pending));
+      root.querySelectorAll(selector).forEach((b) => (b.disabled = pending));
     for (const id of ['mode-song', 'mode-read'])
       $(id).disabled =
         pending ||
@@ -279,10 +306,10 @@ export function createPlayer({ songs, cache, decoder }) {
     $('practice-options').hidden = false;
     $('restart').hidden = false;
     $('player').classList.toggle('full-mode', scope === 'full');
-    document
+    root
       .querySelectorAll('[data-read-speed]')
       .forEach((b) => b.classList.toggle('selected', b.dataset.readSpeed === state.readSpeed));
-    document
+    root
       .querySelectorAll('[data-song-speed]')
       .forEach((b) =>
         b.classList.toggle('selected', Number(b.dataset.songSpeed) === state.songSpeed),
@@ -290,6 +317,7 @@ export function createPlayer({ songs, cache, decoder }) {
     renderPlaying();
   }
   function renderPlaying() {
+    notify();
     renderSelection();
     renderDirectoryCurrent();
     const playing = playIntent,
@@ -312,7 +340,7 @@ export function createPlayer({ songs, cache, decoder }) {
     $('play').setAttribute('aria-label', playing ? '暂停播放' : $('play-label').textContent);
     renderLoadingStatus();
     if (!playing)
-      document.querySelectorAll('.word.playing').forEach((w) => w.classList.remove('playing'));
+      root.querySelectorAll('.word.playing').forEach((w) => w.classList.remove('playing'));
   }
   const songVariant = (line = lines[state.index]) => lineVariant(line, state.songSpeed);
   let pendingPlayback = null,
@@ -407,10 +435,10 @@ export function createPlayer({ songs, cache, decoder }) {
     renderRangePicker();
     drawer.showModal();
     drawer.focus({ preventScroll: true });
-    document.documentElement.classList.toggle('lyrics-open', true);
+    page.classList.toggle('lyrics-open', true);
     $('open-lyrics').setAttribute('aria-expanded', 'true');
     const index = pickerMode() === 'section' && state.rangeReady ? state.rangeStart : state.index;
-    document.querySelectorAll('.line-button').forEach((b) => {
+    root.querySelectorAll('.line-button').forEach((b) => {
       if (Number(b.dataset.index) === index) {
         b.scrollIntoView({ block: 'center' });
         if (event?.detail === 0) b.focus({ preventScroll: true });
@@ -464,27 +492,27 @@ export function createPlayer({ songs, cache, decoder }) {
     loadAudio({ resume });
     savePreferences();
   }
-  $('choose-lyrics').addEventListener('click', () =>
+  listen($('choose-lyrics'), 'click', () =>
     awaitingSong ? $('open-songs').click() : openLyrics(),
   );
-  $('open-lyrics').addEventListener('click', openLyrics);
-  $('close-lyrics').addEventListener('click', closeLyrics);
-  drawer.addEventListener('close', () => {
+  listen($('open-lyrics'), 'click', openLyrics);
+  listen($('close-lyrics'), 'click', closeLyrics);
+  listen(drawer, 'close', () => {
     rangeDraftStart = null;
     pickerScope = null;
     practicePrompt = false;
-    document.documentElement.classList.toggle('lyrics-open', false);
+    page.classList.toggle('lyrics-open', false);
     $('open-lyrics').setAttribute('aria-expanded', 'false');
     $('open-lyrics').focus({ preventScroll: true });
   });
-  drawer.addEventListener('click', (e) => {
+  listen(drawer, 'click', (e) => {
     if (e.target !== drawer) return;
     const r = drawer.getBoundingClientRect();
     if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)
       closeLyrics();
   });
   let sheetTouch = null;
-  drawer.addEventListener(
+  listen(drawer,
     'touchstart',
     (e) => {
       if (
@@ -504,7 +532,7 @@ export function createPlayer({ songs, cache, decoder }) {
     },
     { passive: true },
   );
-  drawer.addEventListener(
+  listen(drawer,
     'touchend',
     (e) => {
       const start = sheetTouch;
@@ -516,7 +544,7 @@ export function createPlayer({ songs, cache, decoder }) {
     },
     { passive: true },
   );
-  drawer.addEventListener(
+  listen(drawer,
     'touchcancel',
     () => {
       sheetTouch = null;
@@ -593,7 +621,7 @@ export function createPlayer({ songs, cache, decoder }) {
   }
 
   const clearWordHighlight = () =>
-    document.querySelectorAll('.word.playing').forEach((word) => word.classList.remove('playing'));
+    root.querySelectorAll('.word.playing').forEach((word) => word.classList.remove('playing'));
   function seekAudio(time) {
     clearWordHighlight();
     // Loading and seeking are asynchronous. Keep only the latest requested position.
@@ -631,6 +659,7 @@ export function createPlayer({ songs, cache, decoder }) {
     audio.webkitPreservesPitch = true;
   }
   function loadAudio({ seek = 0, resume = false } = {}) {
+    if (disposed) return;
     if (state.mode === 'read' && !lines[state.index].narration) {
       state.mode = state.practiceMode = 'song';
       seek = 0;
@@ -712,7 +741,7 @@ export function createPlayer({ songs, cache, decoder }) {
           if (pendingPlayback?.seek > 0) pendingPlayback.seek += bounds.start - data.start;
           playbackSession.songStart = data.start * rate;
           playbackSession.duration = data.duration * rate;
-          audio.attachLoop(data);
+          audio.attachLoop(data, repeat);
           playbackSession.src = audio.src;
           applyPlaybackSettings();
         })
@@ -740,7 +769,7 @@ export function createPlayer({ songs, cache, decoder }) {
         .then((data) => {
           if (generation !== loadGeneration) return;
           playbackSession.songStart = data.start * rate;
-          audio.attachPCM(data, true);
+          audio.attachPCM(data, repeat);
           playbackSession.src = audio.src;
           applyPlaybackSettings();
         })
@@ -790,6 +819,7 @@ export function createPlayer({ songs, cache, decoder }) {
     renderPlaying();
   }
   async function startPlayback() {
+    if (disposed) return;
     void cache?.persist?.();
     if (pendingPracticeScope) return;
     if (failedPosition !== null) {
@@ -924,15 +954,15 @@ export function createPlayer({ songs, cache, decoder }) {
     if (state.segment) renderRanges();
     savePreferences();
   }
-  $('mode-read').addEventListener('click', () => setMode('read'));
-  $('mode-song').addEventListener('click', () => setMode('song'));
-  $('play').addEventListener('click', () => {
+  listen($('mode-read'), 'click', () => setMode('read'));
+  listen($('mode-song'), 'click', () => setMode('song'));
+  listen($('play'), 'click', () => {
     if (playIntent) pausePlayback();
     else startPlayback();
   });
-  $('prev').addEventListener('click', () => select(state.index - 1));
-  $('next').addEventListener('click', () => select(state.index + 1, { autoplay: !state.full }));
-  $('restart').addEventListener('click', () => {
+  listen($('prev'), 'click', () => select(state.index - 1));
+  listen($('next'), 'click', () => select(state.index + 1, { autoplay: !state.full }));
+  listen($('restart'), 'click', () => {
     if (state.full || state.segment) {
       select(state.index, { autoplay: true });
       return;
@@ -951,20 +981,20 @@ export function createPlayer({ songs, cache, decoder }) {
     if (resume) startPlayback();
     else status('已切换朗读速度，下一次从句首播放。');
   }
-  document
+  root
     .querySelectorAll('[data-read-speed]')
-    .forEach((b) => b.addEventListener('click', () => setReadSpeed(b.dataset.readSpeed)));
-  document
+    .forEach((b) => listen(b, 'click', () => setReadSpeed(b.dataset.readSpeed)));
+  root
     .querySelectorAll('[data-song-speed]')
-    .forEach((b) => b.addEventListener('click', () => setSongSpeed(Number(b.dataset.songSpeed))));
-  $('scope-line').addEventListener('click', enterLine);
-  $('scope-full').addEventListener('click', () =>
+    .forEach((b) => listen(b, 'click', () => setSongSpeed(Number(b.dataset.songSpeed))));
+  listen($('scope-line'), 'click', enterLine);
+  listen($('scope-full'), 'click', () =>
     setScope(true, { fromStart: !!pendingPracticeScope }),
   );
-  $('scope-section').addEventListener('click', enterSectionScope);
-  $('choose-section').addEventListener('click', openRangePicker);
+  listen($('scope-section'), 'click', enterSectionScope);
+  listen($('choose-section'), 'click', openRangePicker);
   let scrubTarget = null;
-  $('progress').addEventListener('pointerdown', () => {
+  listen($('progress'), 'pointerdown', () => {
     scrubbing = true;
     scrubTarget = null;
     audio.pause();
@@ -980,8 +1010,8 @@ export function createPlayer({ songs, cache, decoder }) {
     updatePlayback();
   };
   for (const event of ['pointerup', 'pointercancel', 'change'])
-    $('progress').addEventListener(event, finishScrub);
-  $('progress').addEventListener('input', () => {
+    listen($('progress'), event, finishScrub);
+  listen($('progress'), 'input', () => {
     if (!Number.isFinite(playbackDuration())) return;
     const target = (Number($('progress').value) / 1000) * playbackDuration();
     if (scrubbing) {
@@ -990,7 +1020,7 @@ export function createPlayer({ songs, cache, decoder }) {
     }
     seekPosition(target);
   });
-  audio.addEventListener('loadedmetadata', () => {
+  listen(audio, 'loadedmetadata', () => {
     if (!sourceReady()) return;
     applyPlaybackSettings();
     const song = state.full || state.segment || state.mode === 'song';
@@ -1003,12 +1033,13 @@ export function createPlayer({ songs, cache, decoder }) {
     renderPlaying();
     if (request?.resume && playIntent) startPlayback();
   });
-  audio.addEventListener('play', () => {
+  listen(audio, 'play', () => {
     applyPlaybackSettings();
     renderPlaying();
   });
-  audio.addEventListener('pause', renderPlaying);
+  listen(audio, 'pause', renderPlaying);
   function updatePlayback() {
+    notify();
     // Never let an old clock sample overwrite the sentence selected by navigation.
     if (
       pendingPracticeScope ||
@@ -1082,7 +1113,7 @@ export function createPlayer({ songs, cache, decoder }) {
     // Word maps belong to the exact rendered recording, including its speed.
     // Convert the shared song clock back to that recording's local clip seconds.
     const t = read ? time : time / playbackSession.rate - variant.origin;
-    document
+    root
       .querySelectorAll('.word')
       .forEach((word, i) =>
         word.classList.toggle(
@@ -1104,37 +1135,38 @@ export function createPlayer({ songs, cache, decoder }) {
     if (!audio.paused && !audio.ended) playbackFrame = requestAnimationFrame(animatePlayback);
     else playbackFrame = null;
   }
-  audio.addEventListener('play', () => {
+  listen(audio, 'play', () => {
     if (playbackFrame !== null) cancelAnimationFrame(playbackFrame);
     animatePlayback();
   });
-  audio.addEventListener('waiting', () => {
+  listen(audio, 'waiting', () => {
     mediaWaiting = true;
     clearWordHighlight();
     renderPlaying();
   });
-  audio.addEventListener('playing', () => {
+  listen(audio, 'playing', () => {
     if (!sourceReady()) return;
     mediaWaiting = false;
     renderPlaying();
     updatePlayback();
     if (playbackFrame === null && !audio.paused) animatePlayback();
   });
-  audio.addEventListener('pause', () => {
+  listen(audio, 'pause', () => {
     if (playbackFrame !== null) cancelAnimationFrame(playbackFrame);
     playbackFrame = null;
     updatePlayback();
   });
-  audio.addEventListener('timeupdate', updatePlayback);
-  audio.addEventListener('seeking', clearWordHighlight);
-  audio.addEventListener('seeked', () => {
+  listen(audio, 'timeupdate', updatePlayback);
+  listen(audio, 'seeking', clearWordHighlight);
+  listen(audio, 'seeked', () => {
     if (!sourceReady() || !settleSeek()) return;
     updatePlayback();
     if (playIntent && audio.paused) startPlayback();
   });
 
   // PCM repeats on its sample clock; native narration restarts without reloading.
-  audio.addEventListener('ended', () => {
+  listen(audio, 'ended', () => {
+    if (!repeat) { pausePlayback(); return; }
     if (
       !playIntent ||
       !audio.ended ||
@@ -1147,7 +1179,7 @@ export function createPlayer({ songs, cache, decoder }) {
     seekPosition(0);
     startPlayback();
   });
-  audio.addEventListener('error', () => {
+  listen(audio, 'error', () => {
     if (!playbackSession || (audio.currentSrc && audio.currentSrc !== playbackSession.src)) return;
     if (pendingPlayback && !audio.getAttribute('src')) return;
     failedPosition = Math.max(0, requestedPosition() || 0);
@@ -1158,7 +1190,7 @@ export function createPlayer({ songs, cache, decoder }) {
     status('音频加载失败，点击播放重试。', true);
   });
   // Keyboard transport shares the same controls, disabled bounds and audio clock.
-  document.addEventListener('keydown', (e) => {
+  listen(root, 'keydown', (e) => {
     if (
       e.defaultPrevented ||
       e.isComposing ||
@@ -1176,7 +1208,7 @@ export function createPlayer({ songs, cache, decoder }) {
     if (
       !['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyR'].includes(key) ||
       drawer.open ||
-      document.getElementById('song-picker').open
+      $('song-picker').open
     )
       return;
     e.preventDefault();
@@ -1196,17 +1228,17 @@ export function createPlayer({ songs, cache, decoder }) {
     else setSongSpeed(speeds[index]);
   });
   // Release transport controls after pointer clicks; text fields keep their input focus.
-  document.addEventListener('click', (e) => {
+  listen(root, 'click', (e) => {
     const control = e.target.closest(
       'button,input[type=checkbox],input[type=radio],input[type=range]',
     );
-    if (e.detail > 0 && control && document.activeElement === control) control.blur();
+    if (e.detail > 0 && control && doc.activeElement === control) control.blur();
   });
-  $('song-select').addEventListener('change', () => {
+  listen($('song-select'), 'change', () => {
     $('song-select').blur?.();
   });
-  $('song-select').addEventListener('change', () => {
-    const selected = library.find((song) => song.id === $('song-select').value);
+  function loadSong(id) {
+    const selected = availableLibrary.find((song) => song.id === id);
     if (!selected) return;
     const scope =
       pendingPracticeScope || (state.segment ? 'section' : state.full ? 'full' : 'line');
@@ -1214,7 +1246,7 @@ export function createPlayer({ songs, cache, decoder }) {
     pausePlayback();
     state.playGeneration++;
     awaitingSong = false;
-    document.documentElement.classList.remove('awaiting-song');
+    page.classList.remove('awaiting-song');
     $('player').hidden = false;
     $('open-lyrics').disabled = false;
     $('choose-lyrics').textContent = '选择歌词';
@@ -1235,15 +1267,17 @@ export function createPlayer({ songs, cache, decoder }) {
     try {
       localStorage.setItem('lyrics-song', lesson.id);
     } catch {}
-    document.title = lesson.title + ' · 歌词练习';
+    if (root === doc) doc.title = lesson.title + ' · 歌词练习';
     renderList();
     renderLine();
     loadAudio();
     status('');
     savePreferences();
-  });
+    notify();
+  }
+  listen($('song-select'), 'change', () => loadSong($('song-select').value));
   function showSongPrompt() {
-    document.documentElement.classList.add('awaiting-song');
+    page.classList.add('awaiting-song');
     $('lesson').hidden = true;
     $('player').hidden = true;
     $('open-lyrics').disabled = true;
@@ -1272,4 +1306,150 @@ export function createPlayer({ songs, cache, decoder }) {
     loadAudio();
   }
   initializePlayer();
+  initialized = true;
+
+  function getSnapshot() {
+    const clock = audio.snapshot();
+    const raw = playbackSession?.read
+      ? lines[state.index].start
+      : (playbackSession?.songStart || 0) +
+        (clock.time - (playbackSession?.windowStart || 0)) * (playbackSession?.rate || 1);
+    return {
+      songId: awaitingSong ? null : lesson.id,
+      positionSeconds: Math.max(0, Math.min(lesson.duration, Number.isFinite(raw) ? raw : 0)),
+      sourcePositionSeconds: clock.time,
+      durationSeconds: awaitingSong ? null : lesson.duration,
+      currentLineIndex: awaitingSong ? null : state.index,
+      playing: !disposed && !audio.paused && !audio.ended,
+      playIntent, loading: !!pendingPlayback || mediaWaiting,
+      source: awaitingSong ? null : playbackSession?.read ? 'reading' : 'song',
+      scope: state.full ? { kind: 'full' } : state.segment
+        ? { kind: 'section', startIndex: state.rangeStart, endIndex: state.rangeEnd }
+        : { kind: 'line', lineIndex: state.index },
+      pendingScope: pendingPracticeScope,
+      rate: state.songSpeed,
+      loop: { kind: !repeat ? 'none' : state.full ? 'full' : state.segment ? 'section' : 'line' },
+      error: playbackError ? { code: 'PLAYBACK_FAILED', message: $('status').textContent } : null,
+      clockSource: clock.source, disposed,
+    };
+  }
+  const assertActive = () => {
+    if (disposed) throw new DOMException('Player disposed', 'InvalidStateError');
+  };
+  const assertReady = () => {
+    assertActive();
+    if (awaitingSong) throw new DOMException('Load a song first', 'InvalidStateError');
+  };
+  const validIndex = (index) => {
+    if (!Number.isInteger(index) || index < 0 || index >= lines.length)
+      throw new RangeError('Invalid lyric line index');
+  };
+  function setPracticeScope(scope) {
+    assertReady();
+    if (!scope || !['full', 'line', 'section'].includes(scope.kind))
+      throw new TypeError('Unknown practice scope');
+    if (scope.kind === 'line') validIndex(scope.lineIndex);
+    if (scope.kind === 'section') {
+      validIndex(scope.startIndex); validIndex(scope.endIndex);
+      if (scope.startIndex > scope.endIndex) throw new RangeError('Reversed section');
+    }
+    pausePlayback();
+    pendingPracticeScope = null;
+    if (scope.kind === 'full') setScope(true);
+    else if (scope.kind === 'line') {
+      state.full = state.segment = false;
+      select(scope.lineIndex, { autoplay: false });
+    } else {
+      state.full = state.segment = false;
+      state.rangeStart = scope.startIndex; state.rangeEnd = scope.endIndex;
+      state.rangeReady = true;
+      enterSection();
+    }
+    notify();
+  }
+  function dispose() {
+    if (disposed) return;
+    disposed = true;
+    state.playGeneration++; loadGeneration++;
+    playIntent = false; pendingPlayback = pendingSeek = null;
+    mediaWaiting = false;
+    clearWordHighlight();
+    viewEvents.abort();
+    for (const remove of removers.splice(0)) remove();
+    subscriptions.clear();
+    if (playbackFrame !== null) cancelAnimationFrame(playbackFrame);
+    playbackFrame = null;
+    try {
+      audio.pause();
+    } finally {
+      try {
+        audio.dispose();
+      } finally {
+        readingResource?.release(); readingResource = null;
+        void vocalMixer.dispose();
+      }
+    }
+    if (drawer.open) drawer.close();
+    page.classList.remove('lyrics-open', 'awaiting-song', 'single-song', 'mora-enabled');
+    $('lyric-list').replaceChildren();
+    for (const option of options) option.remove();
+  }
+  return {
+    getSnapshot,
+    subscribe(listener) {
+      assertActive();
+      if (typeof listener !== 'function') throw new TypeError('A listener is required');
+      subscriptions.add(listener);
+      return () => subscriptions.delete(listener);
+    },
+    loadSong(id) {
+      assertActive();
+      if (!availableLibrary.some((song) => song.id === id)) throw new RangeError('Unknown song');
+      $('song-select').value = id;
+      loadSong(id);
+    },
+    // Resolves when the request is accepted; subscribe for actual playing/errors.
+    play() {
+      assertReady();
+      if (pendingPracticeScope) throw new DOMException('Select a practice scope first', 'InvalidStateError');
+      return startPlayback();
+    },
+    pause() { assertActive(); pausePlayback(); },
+    seek(seconds) {
+      assertReady();
+      if (!Number.isFinite(seconds)) throw new TypeError('Seek requires finite song seconds');
+      if (playbackSession?.read) throw new DOMException('Song seek requires original audio', 'NotSupportedError');
+      const start = state.full ? 0 : state.segment ? sectionBounds().start * state.songSpeed : songVariant().origin * state.songSpeed;
+      const end = state.full ? lesson.duration : state.segment ? sectionBounds().end * state.songSpeed : songVariant().clipEnd * state.songSpeed;
+      seekPosition((Math.max(start, Math.min(end, seconds)) - start) / state.songSpeed);
+      notify();
+    },
+    selectLine(index, autoplay = false) {
+      assertReady(); validIndex(index);
+      if (state.segment && (index < state.rangeStart || index > state.rangeEnd))
+        throw new RangeError('Line is outside the active section');
+      if (!autoplay) pausePlayback();
+      pendingPracticeScope = null;
+      select(index, { autoplay });
+      notify();
+    },
+    setPracticeScope,
+    setRate(rate) {
+      assertReady();
+      if (playbackSession?.read) throw new DOMException('Use the narration speed controls', 'NotSupportedError');
+      if (![0.5, 0.75, 1].includes(rate)) throw new RangeError('Unsupported song rate');
+      setSongSpeed(rate); notify();
+    },
+    setLoop(kind) {
+      assertReady();
+      const scopeKind = getSnapshot().scope.kind;
+      if (kind !== 'none' && kind !== scopeKind) throw new TypeError('Loop must match the practice scope');
+      const next = kind !== 'none';
+      if (next === repeat) return;
+      const position = requestedPosition(), resume = playIntent;
+      repeat = next;
+      loadAudio({ seek: position, resume });
+    },
+    dispose,
+  };
 }

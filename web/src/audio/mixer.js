@@ -5,10 +5,21 @@ export function createVocalMixer(audio) {
     vocals,
     narration,
     output,
+    mediaSource,
+    backingBus,
+    vocalBus,
+    primingSource,
     read = false,
     volume = 1,
     primed = false,
-    resuming = null;
+    resuming = null,
+    disposed = false;
+  const assertActive = () => {
+    if (disposed) throw new DOMException('Audio mixer disposed', 'InvalidStateError');
+  };
+  const disconnect = (node) => {
+    try { node?.disconnect(); } catch {}
+  };
   function gains(smooth = false) {
     if (!context) return;
     const now = context.currentTime;
@@ -35,42 +46,57 @@ export function createVocalMixer(audio) {
     }
   }
   function initialize() {
+    assertActive();
     if (!context) {
       const Context = window.AudioContext || window.webkitAudioContext;
       if (!Context) throw new Error('Web Audio unavailable');
       context = new Context();
-      const source = context.createMediaElementSource(audio);
-      split = context.createChannelSplitter(4);
-      const back = context.createChannelMerger(2),
-        voice = context.createChannelMerger(2);
-      source.connect(split);
-      split.connect(back, 0, 0);
-      split.connect(back, 1, 1);
-      split.connect(voice, 2, 0);
-      split.connect(voice, 3, 1);
-      backing = context.createGain();
-      vocals = context.createGain();
-      narration = context.createGain();
-      output = context.createGain();
-      output.channelCount = 2;
-      output.channelCountMode = 'explicit';
-      output.channelInterpretation = 'speakers';
-      back.connect(backing);
-      voice.connect(vocals);
-      backing.connect(output);
-      vocals.connect(output);
-      source.connect(narration);
-      narration.connect(output);
-      output.connect(context.destination);
-      gains();
+      try {
+        mediaSource = context.createMediaElementSource(audio);
+        split = context.createChannelSplitter(4);
+        backingBus = context.createChannelMerger(2);
+        vocalBus = context.createChannelMerger(2);
+        mediaSource.connect(split);
+        split.connect(backingBus, 0, 0);
+        split.connect(backingBus, 1, 1);
+        split.connect(vocalBus, 2, 0);
+        split.connect(vocalBus, 3, 1);
+        backing = context.createGain();
+        vocals = context.createGain();
+        narration = context.createGain();
+        output = context.createGain();
+        output.channelCount = 2;
+        output.channelCountMode = 'explicit';
+        output.channelInterpretation = 'speakers';
+        backingBus.connect(backing);
+        vocalBus.connect(vocals);
+        backing.connect(output);
+        vocals.connect(output);
+        mediaSource.connect(narration);
+        narration.connect(output);
+        output.connect(context.destination);
+        gains();
+      } catch (error) {
+        const failedContext = context;
+        for (const node of [mediaSource, split, backingBus, vocalBus, backing, vocals, narration, output])
+          disconnect(node);
+        mediaSource = split = backingBus = vocalBus = backing = vocals = narration = output = null;
+        context = null;
+        if (failedContext) {
+          try { Promise.resolve(failedContext.close()).catch(() => {}); } catch {}
+        }
+        throw error;
+      }
     }
   }
   return {
     setRead(value) {
+      assertActive();
       read = value;
       gains();
     },
     setVolume(value) {
+      assertActive();
       volume = Math.max(0, Math.min(1, Number(value) || 0));
       gains(true);
     },
@@ -119,11 +145,37 @@ export function createVocalMixer(audio) {
         const source = context.createBufferSource();
         source.buffer = context.createBuffer(1, 1, context.sampleRate);
         source.connect(context.destination);
-        source.onended = () => source.disconnect();
+        primingSource = source;
+        source.onended = () => {
+          disconnect(source);
+          if (primingSource === source) primingSource = null;
+        };
         source.start(0);
         primed = true;
       }
       return resuming || Promise.resolve();
+    },
+    dispose() {
+      if (disposed) return Promise.resolve();
+      disposed = true;
+      const activeContext = context;
+      if (primingSource) {
+        const source = primingSource;
+        primingSource = null;
+        source.onended = null;
+        try { source.stop(); } catch {}
+        disconnect(source);
+      }
+      for (const node of [mediaSource, split, backingBus, vocalBus, backing, vocals, narration, output])
+        disconnect(node);
+      mediaSource = split = backingBus = vocalBus = backing = vocals = narration = output = null;
+      context = null;
+      if (!activeContext || activeContext.state === 'closed') return Promise.resolve();
+      try {
+        return Promise.resolve(activeContext.close()).then(() => undefined, () => undefined);
+      } catch {
+        return Promise.resolve();
+      }
     },
   };
 }

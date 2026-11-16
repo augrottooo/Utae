@@ -91,24 +91,34 @@ function balance(container) {
   );
   alignReadings(rows.map((indices) => indices.map((i) => words[i])));
 }
-export const balanceLyrics = (container) => {
+export const balanceLyrics = (container, next = document.getElementById('next-tokens')) => {
   balance(container);
-  const next = document.getElementById('next-tokens');
   if (next) alignReadings([[...next.children]]);
 }; // Measure and commit in the same task, before the browser paints.
 
-export function observeLyrics() {
-  const container = document.getElementById('tokens');
+export function observeLyrics(root = document) {
+  const get = (id) => root.querySelector(`[id="${id}"]`);
+  const container = get('tokens'), next = get('next-tokens');
+  let disposed = false;
+  const balance = () => { if (!disposed) balanceLyrics(container, next); };
+  let observer;
   let width = -1;
   if (window.ResizeObserver)
-    new ResizeObserver((entries) => {
+    observer = new ResizeObserver((entries) => {
       for (const entry of entries)
         if (Math.abs(entry.contentRect.width - width) > 0.5) {
           width = entry.contentRect.width;
-          balanceLyrics(container);
+          balance();
         }
-    }).observe(container);
-  else window.addEventListener('resize', () => balanceLyrics(container));
-  document.fonts?.ready.then(() => balanceLyrics(container));
-  document.fonts?.addEventListener?.('loadingdone', () => balanceLyrics(container));
+    });
+  if (observer) observer.observe(container);
+  else window.addEventListener('resize', balance);
+  document.fonts?.ready.then(balance);
+  document.fonts?.addEventListener?.('loadingdone', balance);
+  return () => {
+    disposed = true;
+    observer?.disconnect();
+    window.removeEventListener('resize', balance);
+    document.fonts?.removeEventListener?.('loadingdone', balance);
+  };
 }

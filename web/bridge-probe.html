@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Utae · Bridge 1A 原型</title>
+    <link rel="stylesheet" href="fonts/serif-jp.css" />
+    <link rel="stylesheet" href="styles/app.css" />
+    <link rel="stylesheet" href="styles/library.css" />
+    <link rel="stylesheet" href="styles/theme.css" />
+    <style>
+      #probe { flex: none; max-height: 35vh; overflow: auto; }
+      #probe-host { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    </style>
+  </head>
+  <body>
+    <aside id="probe" style="padding: 12px; border-bottom: 1px solid #999">
+      <strong>Bridge 1A 静态验证</strong>
+      <a href="?root=global">全局 DOM</a> / <a href="?root=container">容器 DOM</a>
+      <p>此页使用现有 index.html 的 DOM。默认读取本地构建曲库，不提供业务 API。</p>
+      <div>
+        <button id="probe-play">播放</button>
+        <button id="probe-pause">暂停</button>
+        <button id="probe-seek">跳到 8 秒</button>
+        <button id="probe-line">第 2 句</button>
+        <button id="probe-section">第 2–3 句</button>
+        <button id="probe-full">全曲</button>
+        <button id="probe-rate">0.75 倍速</button>
+        <button id="probe-loop">循环 / 单次</button>
+        <button id="probe-unsubscribe">取消订阅</button>
+        <button id="probe-dispose">销毁</button>
+        <button id="probe-remount">新 DOM 挂载</button>
+        <button id="probe-sameHost">同宿主重挂（测试替换 audio）</button>
+      </div>
+      <output id="probe-result" style="display: block; white-space: pre-wrap">正在初始化…</output>
+      <pre id="probe-snapshot" style="max-height: 200px; overflow: auto"></pre>
+    </aside>
+    <section id="probe-host"></section>
+    <script type="module" src="src/bridge-probe.js"></script>
+  </body>
+</html>

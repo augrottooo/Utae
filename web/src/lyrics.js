@@ -1,7 +1,9 @@
 import { renderFurigana } from './furigana.js';
 import { alignReadings, balanceLyrics } from './layout.js';
-export function createLyricsView({ current, next }) {
-  const $ = (id) => document.getElementById(id);
+export function createLyricsView({ current, next, root = document, eventSignal }) {
+  const doc = root.ownerDocument || root;
+  const page = root === doc ? doc.documentElement : root;
+  const $ = (id) => root === doc ? doc.getElementById(id) : root.querySelector(`[id="${id}"]`);
   try {
     $('translation-toggle').checked = localStorage.getItem('lyrics-translation') === 'true';
   } catch {}
@@ -33,19 +35,19 @@ export function createLyricsView({ current, next }) {
       ? split.trim().replace(/\s+/g, ' ')
       : token.romaji;
   };
-  document.documentElement.classList.toggle('mora-enabled', $('mora-toggle').checked);
+  page.classList.toggle('mora-enabled', $('mora-toggle').checked);
   function renderNextLine() {
     const following = next();
     $('next-line').hidden = !$('next-line-toggle').checked || !following;
     $('next-tokens').replaceChildren();
     if (!following) return;
     for (const token of following.tokens) {
-      const word = document.createElement('span');
+      const word = doc.createElement('span');
       word.className = 'next-word';
-      const jp = document.createElement('span');
+      const jp = doc.createElement('span');
       jp.className = 'next-jp';
       renderJapanese(jp, token);
-      const roma = document.createElement('span');
+      const roma = doc.createElement('span');
       roma.className = 'next-romaji';
       roma.textContent = token.romaji;
       word.append(jp, roma);
@@ -58,34 +60,34 @@ export function createLyricsView({ current, next }) {
     try {
       localStorage.setItem('lyrics-next-line', String($('next-line-toggle').checked));
     } catch {}
-  });
+  }, { signal: eventSignal });
   $('translation-toggle').addEventListener('change', () => {
     renderTranslation();
     try {
       localStorage.setItem('lyrics-translation', String($('translation-toggle').checked));
     } catch {}
-  });
+  }, { signal: eventSignal });
   $('mora-toggle').addEventListener('change', () => {
-    document.documentElement.classList.toggle('mora-enabled', $('mora-toggle').checked);
-    document
+    page.classList.toggle('mora-enabled', $('mora-toggle').checked);
+    root
       .querySelectorAll('.word .romaji')
       .forEach((node, i) => (node.textContent = displayRomaji(current().tokens[i])));
     renderNextLine();
-    balanceLyrics($('tokens'));
+    balanceLyrics($('tokens'), $('next-tokens'));
     try {
       localStorage.setItem('lyrics-mora', String($('mora-toggle').checked));
     } catch {}
-  });
+  }, { signal: eventSignal });
   $('kana-toggle').addEventListener('change', () => {
-    document
+    root
       .querySelectorAll('.word .jp')
       .forEach((node, i) => renderJapanese(node, current().tokens[i]));
     renderNextLine();
-    balanceLyrics($('tokens'));
+    balanceLyrics($('tokens'), $('next-tokens'));
     try {
       localStorage.setItem('lyrics-kana', String($('kana-toggle').checked));
     } catch {}
-  });
+  }, { signal: eventSignal });
 
   return { renderTranslation, renderNextLine, renderJapanese, displayRomaji };
 }

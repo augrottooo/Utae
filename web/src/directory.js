@@ -1,6 +1,8 @@
 /** Render the lyric directory; selection decisions belong to the player. */
-export function createDirectory({ context, chooseLine, chooseRange, chooseGroup }) {
-  const list = document.getElementById('lyric-list');
+export function createDirectory({ context, chooseLine, chooseRange, chooseGroup, root = document, eventSignal }) {
+  const doc = root.ownerDocument || root;
+  const $ = (id) => root === doc ? doc.getElementById(id) : root.querySelector(`[id="${id}"]`);
+  const list = $('lyric-list');
   function highlight() {
     const { index, pending, inGap, playing } = context();
     for (const button of list.querySelectorAll('.line-button')) {
@@ -18,19 +20,19 @@ export function createDirectory({ context, chooseLine, chooseRange, chooseGroup 
       if (line.section !== section) {
         let last = index;
         while (last + 1 < lines.length && lines[last + 1].section === line.section) last++;
-        const heading = document.createElement(mode === 'full' ? 'div' : 'button');
+        const heading = doc.createElement(mode === 'full' ? 'div' : 'button');
         heading.className = 'group-title';
         heading.textContent = line.section;
         if (mode !== 'full') {
           heading.type = 'button';
           heading.dataset.count = String(last - index + 1);
           heading.setAttribute('aria-label', `练习${line.section}，${last - index + 1}句`);
-          heading.addEventListener('click', () => chooseGroup(index, last));
+          heading.addEventListener('click', () => chooseGroup(index, last), { signal: eventSignal });
         }
         list.append(heading);
         section = line.section;
       }
-      const button = document.createElement('button');
+      const button = doc.createElement('button');
       button.type = 'button';
       button.className = 'line-button';
       button.dataset.index = index;
@@ -42,20 +44,21 @@ export function createDirectory({ context, chooseLine, chooseRange, chooseGroup 
             : index === draft),
       );
       button.classList.toggle('range-start', mode === 'section' && index === draft);
-      const number = document.createElement('span');
+      const number = doc.createElement('span');
       number.className = 'index';
       number.textContent = String(index + 1).padStart(2, '0');
-      const text = document.createElement('span');
+      const text = doc.createElement('span');
       text.className = 'line-snippet';
       text.textContent = line.jp;
       button.append(number, text);
       button.addEventListener('click', () =>
         context().mode === 'section' ? chooseRange(index) : chooseLine(index),
+        { signal: eventSignal },
       );
       list.append(button);
     }
     highlight();
-    document.getElementById('line-total').textContent =
+    $('line-total').textContent =
       mode === 'section' && draft !== null
         ? `起始：第 ${draft + 1} 句`
         : mode === 'section' && !prompt && rangeReady

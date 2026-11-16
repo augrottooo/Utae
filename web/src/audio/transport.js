@@ -4,11 +4,17 @@ export function createPlaybackTransport({ media, mixer, createChunkedSession }) 
     generation = 0,
     seekCommand = 0,
     seeking = false,
-    muted = media.muted;
+    muted = media.muted,
+    disposed = false;
   const listeners = new Map(),
     emit = (type) => {
+      if (disposed) return;
       for (const fn of listeners.get(type) || []) fn({ type, target: transport });
-    };
+    },
+    mediaListeners = [];
+  const assertActive = () => {
+    if (disposed) throw new DOMException('Playback transport disposed', 'InvalidStateError');
+  };
   for (const type of [
     'loadedmetadata',
     'play',
@@ -20,17 +26,23 @@ export function createPlaybackTransport({ media, mixer, createChunkedSession }) 
     'seeked',
     'ended',
     'error',
-  ])
-    media.addEventListener(type, () => {
-      if (!loop) emit(type);
-    });
-  const dispose = () => {
+  ]) {
+    const listener = () => {
+      if (!disposed && !loop) emit(type);
+    };
+    media.addEventListener(type, listener);
+    mediaListeners.push([type, listener]);
+  }
+  const disposeLoop = () => {
     generation++;
     seekCommand++;
     seeking = false;
     if (loop) {
-      loop.dispose();
-      loop = null;
+      try {
+        loop.dispose();
+      } finally {
+        loop = null;
+      }
     }
     id = '';
   };
@@ -197,6 +209,7 @@ export function createPlaybackTransport({ media, mixer, createChunkedSession }) 
         : { time: media.currentTime, cycle: 0, audible: !media.paused, source: 'media-element' };
     },
     addEventListener(type, fn) {
+      assertActive();
       if (!listeners.has(type)) listeners.set(type, new Set());
       listeners.get(type).add(fn);
     },
@@ -204,10 +217,12 @@ export function createPlaybackTransport({ media, mixer, createChunkedSession }) 
       listeners.get(type)?.delete(fn);
     },
     attachPCM(data, repeat = false) {
+      assertActive();
       return controls.attachLoop(data, repeat);
     },
     attachLoop(data, repeat = true) {
-      dispose();
+      assertActive();
+      disposeLoop();
       media.pause();
       media.removeAttribute('src');
       media.load();
@@ -221,6 +236,7 @@ export function createPlaybackTransport({ media, mixer, createChunkedSession }) 
       });
     },
     async play() {
+      assertActive();
       if (!loop) return media.play();
       const active = loop,
         request = generation;
@@ -231,6 +247,7 @@ export function createPlaybackTransport({ media, mixer, createChunkedSession }) 
       emit('playing');
     },
     pause() {
+      if (disposed) return;
       if (!loop) {
         media.pause();
         return;
@@ -240,14 +257,31 @@ export function createPlaybackTransport({ media, mixer, createChunkedSession }) 
       if (wasPlaying) emit('pause');
     },
     load() {
+      assertActive();
       if (!loop) media.load();
     },
     getAttribute(name) {
       return loop && name === 'src' ? id : media.getAttribute(name);
     },
     removeAttribute(name) {
-      if (name === 'src') dispose();
+      if (name === 'src') disposeLoop();
       media.removeAttribute(name);
+    },
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      for (const [type, listener] of mediaListeners) {
+        try { media.removeEventListener(type, listener); } catch {}
+      }
+      mediaListeners.length = 0;
+      listeners.clear();
+      try {
+        disposeLoop();
+      } finally {
+        media.pause();
+        media.removeAttribute('src');
+        media.load();
+      }
     },
   };
   const transport = new Proxy(controls, {
@@ -269,8 +303,9 @@ export function createPlaybackTransport({ media, mixer, createChunkedSession }) 
       return typeof value === 'function' ? value.bind(media) : value;
     },
     set(target, key, value) {
+      if (disposed) throw new DOMException('Playback transport disposed', 'InvalidStateError');
       if (key === 'src') {
-        dispose();
+        disposeLoop();
         media.src = value;
         return true;
       }
