@@ -1,6 +1,6 @@
 # PlayerBridge 集成方案
 
-阶段状态（2026-11-16）：**1A 完成，1B 未开始**。JS 17/17、Python 7/7 通过；用户确认本地合成音包的浏览器播放与生命周期验收。最终证据和未覆盖范围见 [1A 验收报告](PLAYER_BRIDGE_1A_REPORT.md)。下面区分冻结基线、1A 实现与后续目标契约。
+阶段状态（2026-11-17）：**1A 完成；1B 本轮验收通过，待确认提交**。1A 格式修复提交 `39ef91f` 已推送，checks #3 与 demo #3 成功（用户确认）。1B React 宿主已实现，类型检查、前端 9/9、JS 17/17、Python 7/7、格式、ESLint 和生产构建通过；用户确认当前网页的页面、路由、刷新及相关功能正常。1A 历史证据见 [1A 报告](PLAYER_BRIDGE_1A_REPORT.md)，1B 证据见 [1B 报告](PLAYER_BRIDGE_1B_REPORT.md)。下面区分冻结基线、已交付适配器与后续目标契约。
 
 ## 事实边界
 
@@ -42,7 +42,7 @@ React route
 
 React owns the host lifecycle and renders the Utae business UI. The Bridge owns one Sorane controller instance and translates React commands/events. Sorane remains the only owner of audio time, playback mode, loop boundaries and current lyric calculation.
 
-1A 保留 global ID 与 container-scoped lookup 的原型对照，用户已确认浏览器测试通过。重建边界已明确为替换 audio 元素；固定 ID、全局 CSS、dialog 和单实例约束仍在。1B 尚未开始，其 React 宿主布局和样式隔离仍需集成验证，不把原型结果推定为多实例支持。
+1A 保留 global ID 与 container-scoped lookup 的原型对照，用户已确认浏览器测试通过。重建边界已明确为替换 audio 元素；固定 ID、全局 CSS、dialog 和单实例约束仍在。1B 已实现单实例宿主：直接读取现有 `web/index.html` 模板并去除脚本，将播放器 DOM 导入 React 容器；每次重挂创建新节点。宿主布局经用户浏览器验收，固定 ID 和全局样式仍保留，不支持多实例。
 
 ## Target Bridge contract (design, not current API)
 
@@ -112,7 +112,7 @@ Exit criteria: the proposed Bridge contract can drive the existing player behavi
 
 ### 1B — React host integration
 
-状态：**未开始**，等待下一步指令。
+状态：**本轮验收通过，待确认提交**（2026-11-17）。`packages/player-bridge` 提供实际 1A 接口的 TypeScript 边界、catalog 资产映射和单实例 `mountPlayerHost`；`apps/web` 提供 React 宿主和路由。React 通过缓存的通知快照订阅状态，卸载时先取消订阅、清空监听器，再 dispose Bridge 并丢弃旧 DOM。StrictMode、切歌、重挂和过期快照隔离已有自动化覆盖；用户实际浏览器验收通过。
 
 - Create the smallest React host around the proven controller.
 - Mount exactly one DOM host using the strategy selected by 1A, with one Bridge instance per practice route.
@@ -126,6 +126,6 @@ Only after 1A and 1B pass may the team decide whether any proven modules should 
 
 ## Ownership and errors
 
-未来 `SoranePlayerHost` 持有 Bridge 并在卸载时 dispose。1A 的 Bridge 持有 controller、订阅和布局观察；controller 先停 transport、清理会话及监听器，再释放 mixer 图并关闭 mixer 独占的 AudioContext。context 仅在同一实例内部由 mixer、transport 和 chunk session 共用，未采用跨播放器全局 context。关闭 context 不解除原 audio 的媒体源关联，Host 采用替换整个 audio 元素的策略。
+1B 的 `SoranePlayerHost` 已持有 Bridge session，并在卸载、切歌和显式重挂时 dispose；单实例锁在正常清理及初始化失败时均释放。1A 的 Bridge 持有 controller、订阅和布局观察；controller 先停 transport、清理会话及监听器，再释放 mixer 图并关闭 mixer 独占的 AudioContext。context 仅在同一实例内部由 mixer、transport 和 chunk session 共用，未采用跨播放器全局 context。关闭 context 不解除原 audio 的媒体源关联，Host 采用替换整个 audio 元素的策略。
 
 cache、decoder 和 chunk engine 由每次工厂调用创建，持久 Cache Storage 可共享；1A 没有新增缓存驱逐或全部后台下载取消接口。浏览器自动播放拒绝、网络等待、解码失败和歌曲制作失败仍是不同状态。1A 的浏览器证据及其范围以报告为准。

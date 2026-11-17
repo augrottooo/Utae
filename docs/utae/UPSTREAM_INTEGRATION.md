@@ -2,7 +2,7 @@
 
 ## 核查范围和版本
 
-本文件保留 `80f04d6` 提交的源码核查基线，不能等同于含未提交 1A 修改的工作区状态。2026-11-16 阶段 **1A 已完成，1B 未开始**；后续实现及验收证据见 [1A 报告](PLAYER_BRIDGE_1A_REPORT.md)。
+本文件保留 `80f04d6` 提交的历史源码核查基线，下面 Player 源码章节及版本列表描述该冻结基线。当前集成状态（2026-11-17）：**1A 已完成；1B 本轮验收通过，待确认提交**。1A 和格式修复已分别提交为 `d6a1888`、`39ef91f`；1B 证据见 [1B 报告](PLAYER_BRIDGE_1B_REPORT.md)，1A 历史证据见 [1A 报告](PLAYER_BRIDGE_1A_REPORT.md)。
 
 - Player 本地路径：`C:\Users\hj\Projects\utae`。
 - Player HEAD：`80f04d69070b0816d2c8335e1b782df2f2dd7e13`，其上游基线为 `15bb3bb7dd05430af18120bfbc1ef2558322308b`。
@@ -10,6 +10,12 @@
 - Player 声明：Node >=24、Python >=3.12、包版本 0.1.0、歌曲包 schema 1 / format revision 1.0.0。
 - Schema 文件对比：当前 Player HEAD `80f04d69070b0816d2c8335e1b782df2f2dd7e13` 与上游基线 `15bb3bb7dd05430af18120bfbc1ef2558322308b` 的 `docs/data-format.md`、`lyric_player/schema.py`、`format-version.json` 一致；只确认了这些 schema 契约文件，不代表两提交的全部代码/fixture 相同。Utae 当前映射以实际使用的 Player HEAD 为准，后续版本变化时重新对比。
 - Studio 当前核查基线：`b63633f5381a582e851a953409583c4679b098c5`（`main`，2026-10-20，提交“增加Nanami三档读音合成和词时间记录”）。该 commit 来自 GitHub API 和源码读取，不代表本地已安装或运行。
+
+## 1B 集成增量
+
+`apps/web` 和 `packages/player-bridge` 为同仓 npm workspaces；Bridge 直接导入原位 `web/src/player-bridge.js`，模板直接导入原位 `web/index.html`。原 `web/src/main.js` 的启动脚本不在 React 宿主执行。React 管理本地曲库查询、路由、单实例 DOM 宿主和快照展示，Sorane 仍独占时钟、播放状态、歌词计算及音频调度。上游播放器 DOM 和全局样式保留，未宣称完整替换歌词/练习 UI。
+
+本轮未修改上游音频核心或 schema。类型、前端 9/9、JS 17/17、Python 7/7、格式、ESLint 和构建通过；用户确认页面、路由、刷新及相关功能正常。既有缓存/后台下载的清理边界保持原语义，过期会话不能重新挂载；没有增加多实例支持、后台任务全量取消或 Studio 运行证据。
 
 ## Player 源码确认
 

@@ -54,4 +54,4 @@ API client 使用同源 `/api` base URL，Fetch/Axios 请求携带 Cookie creden
 
 组件挂载初始化一个 PlayerBridge，卸载时取消事件订阅并调用 controller disposal。1A 已实现 controller/Bridge dispose：先清理 transport 会话与监听器，再断开 mixer 图并安全关闭其独占 AudioContext。Bridge 替换整个 audio 元素，React 重挂必须提供新 DOM；不能复用旧 audio 来创建新的 MediaElementAudioSourceNode。cache/decoder 后台工作不保证全部取消，generation 防止过期结果挂载。切歌、seek 和速度切换都使用请求代号，过期异步结果不能覆盖当前会话。React 错误边界显示播放器错误并提供重新加载；不把浏览器自动播放拒绝误报为歌曲处理失败。
 
-视觉规则和色彩 token 以本文件后续实现版本为准；阶段 1A 已完成；阶段 1B 尚未开始，React 页面在获准后实施。
+阶段 1A 已完成；阶段 1B 的最小 React 宿主已实现，本轮自动化和用户实际浏览器验收通过，待确认提交。当前仅提供本地入口和 `/songs/:songId/practice`；其余路由和业务组件仍是后续设计。宿主通过 `useSyncExternalStore` 读取缓存的 Bridge 快照；Zustand 仅保存状态详情面板开关。上游歌词与练习控件继续由原 DOM 渲染，React 展示当前句罗马音与播放快照，并通过 Bridge 发命令，没有复制时钟或调度逻辑。样式复用上游全局 CSS 并用宿主 CSS Modules 补充布局，固定 ID 仍限定每个 document 一个播放器。[1B 报告](PLAYER_BRIDGE_1B_REPORT.md) 记录实现与证据范围。

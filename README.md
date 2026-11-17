@@ -4,7 +4,7 @@ Utae 是面向日语歌曲精听与发音练习的工具，以 [Sorane Player](h
 
 当前仓库保留上游播放器、构建工具、文档、Git 历史及版权声明。上游基线为 `15bb3bb7dd05430af18120bfbc1ef2558322308b`；仓库切换与版本信息见 [切换记录](docs/utae-repository-switch.md)。
 
-本地目录为 `C:\Users\hj\Projects\utae`。当前提供歌曲包播放及已验收的 Bridge 1A 原型，React 宿主、用户上传、Java 后端、学习记录与 Agent 属于后续规划。旧版仓库不作为当前开发来源，禁止访问。
+本地目录为 `C:\Users\hj\Projects\utae`。当前提供歌曲包播放、已验收的 Bridge 1A 原型和 React 宿主 1B。1B 自动化检查及用户实际浏览器验收均通过，处于待确认提交状态。用户上传、Java 后端、学习记录与 Agent 属于后续规划。旧版仓库不作为当前开发来源，禁止访问。
 
 以下保留上游使用说明；其中 Sorane 演示链接指向上游站点，运行示例按上游目录名称书写。本地使用时进入当前 Utae 目录。歌曲制作由独立的 Sorane Studio 负责。
 
@@ -84,7 +84,25 @@ python -m ruff format --check server lyric_player tests
 
 ## Utae PlayerBridge 1A 原型
 
-静态验证入口：构建后打开 `http://127.0.0.1:8080/bridge-probe.html?root=container`；切换 `root=global` 作对照。[接口、验证结果与未完成项](docs/utae/PLAYER_BRIDGE_1A_REPORT.md)。Bridge host 在销毁后替换整个 `<audio>` 元素；同一元素不能通过关闭 AudioContext 重置其 MediaElementAudioSourceNode 关联。阶段 1A 已于 2026-11-16 验收完成（JS 17/17、Python 7/7；用户浏览器确认旧 AudioContext 关闭及新节点重挂播放、暂停正常）。验证仅使用本地合成音测试包，真实歌曲包兼容性尚未验证。阶段 1B 未开始，等待下一步指令。
+静态验证入口：构建后打开 `http://127.0.0.1:8080/bridge-probe.html?root=container`；切换 `root=global` 作对照。[接口、验证结果与未完成项](docs/utae/PLAYER_BRIDGE_1A_REPORT.md)。Bridge host 在销毁后替换整个 `<audio>` 元素；同一元素不能通过关闭 AudioContext 重置其 MediaElementAudioSourceNode 关联。阶段 1A 已于 2026-11-16 验收完成（JS 17/17、Python 7/7；用户浏览器确认旧 AudioContext 关闭及新节点重挂播放、暂停正常）。验证仅使用本地合成音测试包，真实歌曲包兼容性尚未验证。阶段 1B 的 React 宿主已完成实现与本轮验收，见 [1B 报告](docs/utae/PLAYER_BRIDGE_1B_REPORT.md)。
+
+## Utae React 宿主 1B
+
+需要 Node.js >=24 及已安装的项目依赖。在项目根目录运行：
+
+```powershell
+Set-Location 'C:\Users\hj\Projects\utae'
+python -m lyric_player demo
+python -m lyric_player build
+npm run prepare:player
+npm run dev --workspace @utae/web -- --host 127.0.0.1 --port 5174 --strictPort
+```
+
+已有本地歌曲构建时，可跳过生成 demo 和 Python build。资产准备仅复制构建生成的内容哈希资产及曲库，不复制上游 JS/HTML。以上通过命令参数选择端口，不修改 Vite 或系统配置。访问 <http://127.0.0.1:5174/>，练习路由为 `/songs/:songId/practice`。部署 React 构建时，静态服务器需要将页面路由回退至 `index.html`。
+
+`npm run build` 生成 React 站点 `apps/web/dist/`。检查命令为 `npm run format:check`、`npm run format:host`、`npm run lint`、`npm run typecheck`、`npm run test:frontend`、`npm test` 和 `python -m unittest discover -s tests`。现有 GitHub Pages 工作流仍部署 Python 生成的 Sorane 演示站点；1B 没有调整该部署工作流。
+
+[1B 实施与验收报告](docs/utae/PLAYER_BRIDGE_1B_REPORT.md) 记录播放器职责边界、生命周期、自动化结果和用户浏览器验收。
 
 ## Utae 正式文档索引
 
@@ -105,4 +123,4 @@ python -m ruff format --check server lyric_player tests
 - [架构决策记录](docs/utae/DECISIONS.md)
 - [Codex 工作流](docs/utae/CODEX_WORKFLOW.md)
 
-阶段 1A 已完成并归档；阶段 1B 未开始，等待下一步指令。后续规划功能仍不属于当前已实现能力。
+阶段 1A 已完成并归档；阶段 1B 已通过本轮自动化检查及用户实际浏览器验收，等待确认提交。当前记录的测试资产为本地合成音包；后续业务阶段尚未开始。
