@@ -1,7 +1,14 @@
 /** Render the lyric directory; selection decisions belong to the player. */
-export function createDirectory({ context, chooseLine, chooseRange, chooseGroup, root = document, eventSignal }) {
+export function createDirectory({
+  context,
+  chooseLine,
+  chooseRange,
+  chooseGroup,
+  root = document,
+  eventSignal,
+}) {
   const doc = root.ownerDocument || root;
-  const $ = (id) => root === doc ? doc.getElementById(id) : root.querySelector(`[id="${id}"]`);
+  const $ = (id) => (root === doc ? doc.getElementById(id) : root.querySelector(`[id="${id}"]`));
   const list = $('lyric-list');
   function highlight() {
     const { index, pending, inGap, playing } = context();
@@ -27,7 +34,9 @@ export function createDirectory({ context, chooseLine, chooseRange, chooseGroup,
           heading.type = 'button';
           heading.dataset.count = String(last - index + 1);
           heading.setAttribute('aria-label', `练习${line.section}，${last - index + 1}句`);
-          heading.addEventListener('click', () => chooseGroup(index, last), { signal: eventSignal });
+          heading.addEventListener('click', () => chooseGroup(index, last), {
+            signal: eventSignal,
+          });
         }
         list.append(heading);
         section = line.section;
@@ -51,8 +60,9 @@ export function createDirectory({ context, chooseLine, chooseRange, chooseGroup,
       text.className = 'line-snippet';
       text.textContent = line.jp;
       button.append(number, text);
-      button.addEventListener('click', () =>
-        context().mode === 'section' ? chooseRange(index) : chooseLine(index),
+      button.addEventListener(
+        'click',
+        () => (context().mode === 'section' ? chooseRange(index) : chooseLine(index)),
         { signal: eventSignal },
       );
       list.append(button);

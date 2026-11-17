@@ -67,10 +67,7 @@ type PlayerSnapshot = {
 };
 
 interface PlayerBridge {
-  loadPackage(input: {
-    song: SoraneSongEntry;
-    chunks: SoraneChunkIndex;
-  }): Promise<void>;
+  loadPackage(input: { song: SoraneSongEntry; chunks: SoraneChunkIndex }): Promise<void>;
   play(): Promise<void>;
   pause(): void;
   seek(seconds: number): void;

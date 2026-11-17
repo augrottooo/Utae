@@ -98,9 +98,12 @@ export const balanceLyrics = (container, next = document.getElementById('next-to
 
 export function observeLyrics(root = document) {
   const get = (id) => root.querySelector(`[id="${id}"]`);
-  const container = get('tokens'), next = get('next-tokens');
+  const container = get('tokens'),
+    next = get('next-tokens');
   let disposed = false;
-  const balance = () => { if (!disposed) balanceLyrics(container, next); };
+  const balance = () => {
+    if (!disposed) balanceLyrics(container, next);
+  };
   let observer;
   let width = -1;
   if (window.ResizeObserver)

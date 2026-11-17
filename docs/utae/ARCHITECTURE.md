@@ -22,19 +22,19 @@ Spring Boot 模块化单体
 
 ## 源码确认：Sorane Player
 
-| 模块 | 实际职责 | 复用策略 |
-| --- | --- | --- |
-| `web/src/audio/transport.js` | HTMLAudio、PCM loop、播放时钟和 seek | 保留，包装为 Bridge |
-| `web/src/audio/chunks.js` | 44.1kHz 分块调度、预取、循环、恢复 | 保留，补测试后复用 |
-| `web/src/audio/decoder.js` | 整段解码后备路径 | 保留 |
-| `web/src/audio/cache.js` | Cache Storage、并发下载和失效 | 保留，未来增加授权 URL 适配 |
-| `web/src/audio/mixer.js` | 四声道拆分、人声/伴奏增益、朗读切换 | 保留，按资产能力显示 UI |
-| `web/src/timeline.js` | 原曲时间到速度变体的映射 | 保留 |
-| `web/src/player.js` | 练习模式、句子选择、固定 DOM 事件 | 先隔离，再由 Bridge 包装 |
-| `web/src/lyrics.js`、`layout.js`、`directory.js` | 当前页面文字和目录 UI | React 页面逐步替换 |
-| `web/src/library.js` | 静态目录搜索和 localStorage 收藏 | 替换为后端 API；仅保留排序/搜索逻辑参考 |
-| `lyric_player/schema.py`、`build.py` | schema 校验和静态构建 | 作为歌曲包契约参考；服务端另建适配层 |
-| `server/http.py`、`compose.yaml` | 静态预览服务 | 仅保留开发参考，不作为业务后端 |
+| 模块                                             | 实际职责                             | 复用策略                                |
+| ------------------------------------------------ | ------------------------------------ | --------------------------------------- |
+| `web/src/audio/transport.js`                     | HTMLAudio、PCM loop、播放时钟和 seek | 保留，包装为 Bridge                     |
+| `web/src/audio/chunks.js`                        | 44.1kHz 分块调度、预取、循环、恢复   | 保留，补测试后复用                      |
+| `web/src/audio/decoder.js`                       | 整段解码后备路径                     | 保留                                    |
+| `web/src/audio/cache.js`                         | Cache Storage、并发下载和失效        | 保留，未来增加授权 URL 适配             |
+| `web/src/audio/mixer.js`                         | 四声道拆分、人声/伴奏增益、朗读切换  | 保留，按资产能力显示 UI                 |
+| `web/src/timeline.js`                            | 原曲时间到速度变体的映射             | 保留                                    |
+| `web/src/player.js`                              | 练习模式、句子选择、固定 DOM 事件    | 先隔离，再由 Bridge 包装                |
+| `web/src/lyrics.js`、`layout.js`、`directory.js` | 当前页面文字和目录 UI                | React 页面逐步替换                      |
+| `web/src/library.js`                             | 静态目录搜索和 localStorage 收藏     | 替换为后端 API；仅保留排序/搜索逻辑参考 |
+| `lyric_player/schema.py`、`build.py`             | schema 校验和静态构建                | 作为歌曲包契约参考；服务端另建适配层    |
+| `server/http.py`、`compose.yaml`                 | 静态预览服务                         | 仅保留开发参考，不作为业务后端          |
 
 Player 依赖 `web/index.html` 的固定 DOM ID，不能直接当成 UI 无关 npm 包。阶段 1A 已在原位实现 controller、快照、订阅和 dispose，Bridge 接收 catalog、root、songId；完整目标 loadPackage 尚未实现。React 集成采用单实例宿主，具体边界见 [PLAYER_BRIDGE.md](PLAYER_BRIDGE.md) 和 [1A 报告](PLAYER_BRIDGE_1A_REPORT.md)。
 
@@ -42,15 +42,15 @@ Player 依赖 `web/index.html` 的固定 DOM ID，不能直接当成 UI 无关 n
 
 阶段 1 保持 Sorane 上游目录原位，不进行大规模移动或复制：
 
-| 阶段 1 位置 | 所有者 | 处理方式 |
-| --- | --- | --- |
-| `web/src/audio/` | Sorane 播放核心 | 原位保留，Bridge 通过现有 import 使用 |
-| `web/src/player.js` | Sorane 控制器 | 原位增量改造，增加最小 controller/snapshot/event/dispose 出口 |
-| `web/src/timeline.js`、`lyrics.js`、`layout.js` | Sorane 时间和旧 UI | 时间映射先保留；旧 UI 逐步由 React 替代 |
-| `lyric_player/` | 歌曲包 schema、校验、构建 | 原位保留，作为真实 schema 适配和构建工具 |
-| `tests/` | 上游 JS/Python 测试 | 原位保留并先扩展 Bridge 相关测试 |
-| `apps/web/` | Utae React 应用 | 仅在 1A 通过后创建最小宿主，不复制 `audio/` |
-| `packages/player-bridge/` | Utae 适配层 | 1B 采用同仓 npm workspace；配置和依赖在 1B 开始前核对根包/锁文件后再加入 |
+| 阶段 1 位置                                     | 所有者                    | 处理方式                                                                 |
+| ----------------------------------------------- | ------------------------- | ------------------------------------------------------------------------ |
+| `web/src/audio/`                                | Sorane 播放核心           | 原位保留，Bridge 通过现有 import 使用                                    |
+| `web/src/player.js`                             | Sorane 控制器             | 原位增量改造，增加最小 controller/snapshot/event/dispose 出口            |
+| `web/src/timeline.js`、`lyrics.js`、`layout.js` | Sorane 时间和旧 UI        | 时间映射先保留；旧 UI 逐步由 React 替代                                  |
+| `lyric_player/`                                 | 歌曲包 schema、校验、构建 | 原位保留，作为真实 schema 适配和构建工具                                 |
+| `tests/`                                        | 上游 JS/Python 测试       | 原位保留并先扩展 Bridge 相关测试                                         |
+| `apps/web/`                                     | Utae React 应用           | 仅在 1A 通过后创建最小宿主，不复制 `audio/`                              |
+| `packages/player-bridge/`                       | Utae 适配层               | 1B 采用同仓 npm workspace；配置和依赖在 1B 开始前核对根包/锁文件后再加入 |
 
 依赖关系是 `apps/web -> packages/player-bridge -> 当前 web/src/player.js -> 当前 web/src/audio/*`。在 1A/1B 通过前，不把 `web/src/audio` 复制到 `packages/player-bridge`，不把 `lyric_player` 重新实现为 npm 包，也不把目录结构图当成已经存在的目录。
 

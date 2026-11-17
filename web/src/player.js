@@ -8,11 +8,17 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
   if (!Array.isArray(songs) || !songs.length) throw new TypeError('A song catalog is required');
   const doc = root.ownerDocument || root;
   const page = root === doc ? doc.documentElement : root;
-  const subscriptions = new Set(), removers = [], options = [];
+  const subscriptions = new Set(),
+    removers = [],
+    options = [];
   const viewEvents = new AbortController();
-  let disposed = false, notificationPending = false, initialized = false;
+  let disposed = false,
+    notificationPending = false,
+    initialized = false;
   function listen(target, type, listener, config) {
-    const guarded = (event) => { if (!disposed) listener(event); };
+    const guarded = (event) => {
+      if (!disposed) listener(event);
+    };
     target.addEventListener(type, guarded, config);
     removers.push(() => target.removeEventListener(type, guarded, config));
   }
@@ -23,18 +29,23 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
       notificationPending = false;
       if (disposed || !initialized) return;
       for (const listener of subscriptions) {
-        try { listener(getSnapshot()); } catch (error) { console.error('Player subscriber failed', error); }
+        try {
+          listener(getSnapshot());
+        } catch (error) {
+          console.error('Player subscriber failed', error);
+        }
       }
     });
   }
   const availableLibrary = songs;
   let requestedSongId = songId ?? null;
   try {
-    if (songId === undefined) requestedSongId = new URLSearchParams(window.location.search).get('song');
+    if (songId === undefined)
+      requestedSongId = new URLSearchParams(window.location.search).get('song');
   } catch {}
   const linkedSong = availableLibrary.find((song) => song.id === requestedSongId),
     library = linkedSong ? [linkedSong] : availableLibrary;
-  const $ = (id) => root === doc ? doc.getElementById(id) : root.querySelector(`[id="${id}"]`),
+  const $ = (id) => (root === doc ? doc.getElementById(id) : root.querySelector(`[id="${id}"]`)),
     media = $('audio'),
     vocalMixer = createVocalMixer(media),
     audio = createPlaybackTransport({
@@ -62,9 +73,11 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
   $('song-select').value = awaitingSong ? '' : lesson.id;
   $('song-select').disabled = !!linkedSong;
   page.classList.toggle('single-song', !!linkedSong);
-  if (root === doc) doc.title = awaitingSong ? 'Utae（唱吧）· 歌词练习' : lesson.title + ' · 歌词练习';
+  if (root === doc)
+    doc.title = awaitingSong ? 'Utae（唱吧）· 歌词练习' : lesson.title + ' · 歌词练习';
   const { renderTranslation, renderNextLine, renderJapanese, displayRomaji } = createLyricsView({
-    root, eventSignal: viewEvents.signal,
+    root,
+    eventSignal: viewEvents.signal,
     current: () => lines[state.index],
     next: () => (state.segment && state.index >= state.rangeEnd ? null : lines[state.index + 1]),
   });
@@ -208,7 +221,8 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
     }
   } catch {}
   const directory = createDirectory({
-    root, eventSignal: viewEvents.signal,
+    root,
+    eventSignal: viewEvents.signal,
     context: () => ({
       lines,
       index: state.index,
@@ -512,7 +526,8 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
       closeLyrics();
   });
   let sheetTouch = null;
-  listen(drawer,
+  listen(
+    drawer,
     'touchstart',
     (e) => {
       if (
@@ -532,7 +547,8 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
     },
     { passive: true },
   );
-  listen(drawer,
+  listen(
+    drawer,
     'touchend',
     (e) => {
       const start = sheetTouch;
@@ -544,7 +560,8 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
     },
     { passive: true },
   );
-  listen(drawer,
+  listen(
+    drawer,
     'touchcancel',
     () => {
       sheetTouch = null;
@@ -988,9 +1005,7 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
     .querySelectorAll('[data-song-speed]')
     .forEach((b) => listen(b, 'click', () => setSongSpeed(Number(b.dataset.songSpeed))));
   listen($('scope-line'), 'click', enterLine);
-  listen($('scope-full'), 'click', () =>
-    setScope(true, { fromStart: !!pendingPracticeScope }),
-  );
+  listen($('scope-full'), 'click', () => setScope(true, { fromStart: !!pendingPracticeScope }));
   listen($('scope-section'), 'click', enterSectionScope);
   listen($('choose-section'), 'click', openRangePicker);
   let scrubTarget = null;
@@ -1166,7 +1181,10 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
 
   // PCM repeats on its sample clock; native narration restarts without reloading.
   listen(audio, 'ended', () => {
-    if (!repeat) { pausePlayback(); return; }
+    if (!repeat) {
+      pausePlayback();
+      return;
+    }
     if (
       !playIntent ||
       !audio.ended ||
@@ -1321,16 +1339,20 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
       durationSeconds: awaitingSong ? null : lesson.duration,
       currentLineIndex: awaitingSong ? null : state.index,
       playing: !disposed && !audio.paused && !audio.ended,
-      playIntent, loading: !!pendingPlayback || mediaWaiting,
+      playIntent,
+      loading: !!pendingPlayback || mediaWaiting,
       source: awaitingSong ? null : playbackSession?.read ? 'reading' : 'song',
-      scope: state.full ? { kind: 'full' } : state.segment
-        ? { kind: 'section', startIndex: state.rangeStart, endIndex: state.rangeEnd }
-        : { kind: 'line', lineIndex: state.index },
+      scope: state.full
+        ? { kind: 'full' }
+        : state.segment
+          ? { kind: 'section', startIndex: state.rangeStart, endIndex: state.rangeEnd }
+          : { kind: 'line', lineIndex: state.index },
       pendingScope: pendingPracticeScope,
       rate: state.songSpeed,
       loop: { kind: !repeat ? 'none' : state.full ? 'full' : state.segment ? 'section' : 'line' },
       error: playbackError ? { code: 'PLAYBACK_FAILED', message: $('status').textContent } : null,
-      clockSource: clock.source, disposed,
+      clockSource: clock.source,
+      disposed,
     };
   }
   const assertActive = () => {
@@ -1350,7 +1372,8 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
       throw new TypeError('Unknown practice scope');
     if (scope.kind === 'line') validIndex(scope.lineIndex);
     if (scope.kind === 'section') {
-      validIndex(scope.startIndex); validIndex(scope.endIndex);
+      validIndex(scope.startIndex);
+      validIndex(scope.endIndex);
       if (scope.startIndex > scope.endIndex) throw new RangeError('Reversed section');
     }
     pausePlayback();
@@ -1361,7 +1384,8 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
       select(scope.lineIndex, { autoplay: false });
     } else {
       state.full = state.segment = false;
-      state.rangeStart = scope.startIndex; state.rangeEnd = scope.endIndex;
+      state.rangeStart = scope.startIndex;
+      state.rangeEnd = scope.endIndex;
       state.rangeReady = true;
       enterSection();
     }
@@ -1370,8 +1394,10 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
   function dispose() {
     if (disposed) return;
     disposed = true;
-    state.playGeneration++; loadGeneration++;
-    playIntent = false; pendingPlayback = pendingSeek = null;
+    state.playGeneration++;
+    loadGeneration++;
+    playIntent = false;
+    pendingPlayback = pendingSeek = null;
     mediaWaiting = false;
     clearWordHighlight();
     viewEvents.abort();
@@ -1385,7 +1411,8 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
       try {
         audio.dispose();
       } finally {
-        readingResource?.release(); readingResource = null;
+        readingResource?.release();
+        readingResource = null;
         void vocalMixer.dispose();
       }
     }
@@ -1411,21 +1438,35 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
     // Resolves when the request is accepted; subscribe for actual playing/errors.
     play() {
       assertReady();
-      if (pendingPracticeScope) throw new DOMException('Select a practice scope first', 'InvalidStateError');
+      if (pendingPracticeScope)
+        throw new DOMException('Select a practice scope first', 'InvalidStateError');
       return startPlayback();
     },
-    pause() { assertActive(); pausePlayback(); },
+    pause() {
+      assertActive();
+      pausePlayback();
+    },
     seek(seconds) {
       assertReady();
       if (!Number.isFinite(seconds)) throw new TypeError('Seek requires finite song seconds');
-      if (playbackSession?.read) throw new DOMException('Song seek requires original audio', 'NotSupportedError');
-      const start = state.full ? 0 : state.segment ? sectionBounds().start * state.songSpeed : songVariant().origin * state.songSpeed;
-      const end = state.full ? lesson.duration : state.segment ? sectionBounds().end * state.songSpeed : songVariant().clipEnd * state.songSpeed;
+      if (playbackSession?.read)
+        throw new DOMException('Song seek requires original audio', 'NotSupportedError');
+      const start = state.full
+        ? 0
+        : state.segment
+          ? sectionBounds().start * state.songSpeed
+          : songVariant().origin * state.songSpeed;
+      const end = state.full
+        ? lesson.duration
+        : state.segment
+          ? sectionBounds().end * state.songSpeed
+          : songVariant().clipEnd * state.songSpeed;
       seekPosition((Math.max(start, Math.min(end, seconds)) - start) / state.songSpeed);
       notify();
     },
     selectLine(index, autoplay = false) {
-      assertReady(); validIndex(index);
+      assertReady();
+      validIndex(index);
       if (state.segment && (index < state.rangeStart || index > state.rangeEnd))
         throw new RangeError('Line is outside the active section');
       if (!autoplay) pausePlayback();
@@ -1436,17 +1477,21 @@ export function createPlayer({ songs, cache, decoder, root = document, songId })
     setPracticeScope,
     setRate(rate) {
       assertReady();
-      if (playbackSession?.read) throw new DOMException('Use the narration speed controls', 'NotSupportedError');
+      if (playbackSession?.read)
+        throw new DOMException('Use the narration speed controls', 'NotSupportedError');
       if (![0.5, 0.75, 1].includes(rate)) throw new RangeError('Unsupported song rate');
-      setSongSpeed(rate); notify();
+      setSongSpeed(rate);
+      notify();
     },
     setLoop(kind) {
       assertReady();
       const scopeKind = getSnapshot().scope.kind;
-      if (kind !== 'none' && kind !== scopeKind) throw new TypeError('Loop must match the practice scope');
+      if (kind !== 'none' && kind !== scopeKind)
+        throw new TypeError('Loop must match the practice scope');
       const next = kind !== 'none';
       if (next === repeat) return;
-      const position = requestedPosition(), resume = playIntent;
+      const position = requestedPosition(),
+        resume = playIntent;
       repeat = next;
       loadAudio({ seek: position, resume });
     },

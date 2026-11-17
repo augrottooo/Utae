@@ -271,7 +271,9 @@ export function createPlaybackTransport({ media, mixer, createChunkedSession }) 
       if (disposed) return;
       disposed = true;
       for (const [type, listener] of mediaListeners) {
-        try { media.removeEventListener(type, listener); } catch {}
+        try {
+          media.removeEventListener(type, listener);
+        } catch {}
       }
       mediaListeners.length = 0;
       listeners.clear();

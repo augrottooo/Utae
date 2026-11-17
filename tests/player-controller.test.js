@@ -4,9 +4,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { lineVariant } from '../web/src/timeline.js';
 
-const code = fs.readFileSync(new URL('../web/src/player.js', import.meta.url), 'utf8')
-  .replace(/^import .*;\n/gm, '').replace('export function', 'function');
-const flush = async () => { for (let i = 0; i < 15; i++) await Promise.resolve(); };
+const code = fs
+  .readFileSync(new URL('../web/src/player.js', import.meta.url), 'utf8')
+  .replace(/^import .*;\n/gm, '')
+  .replace('export function', 'function');
+const flush = async () => {
+  for (let i = 0; i < 15; i++) await Promise.resolve();
+};
 
 // Controller unit doubles. Real DOM, decoder, mixer and audio clock are tested by the browser probe.
 class Node extends EventTarget {
@@ -15,16 +19,30 @@ class Node extends EventTarget {
   style = {};
   classList = { toggle() {}, add() {}, remove() {} };
   attrs = new Map();
-  append(...nodes) { this.children.push(...nodes); }
-  replaceChildren(...nodes) { this.children = nodes; }
-  setAttribute(k, v) { this.attrs.set(k, v); }
-  getAttribute(k) { return this.attrs.get(k) || null; }
+  append(...nodes) {
+    this.children.push(...nodes);
+  }
+  replaceChildren(...nodes) {
+    this.children = nodes;
+  }
+  setAttribute(k, v) {
+    this.attrs.set(k, v);
+  }
+  getAttribute(k) {
+    return this.attrs.get(k) || null;
+  }
   remove() {}
   focus() {}
   blur() {}
-  close() { this.open = false; }
-  querySelectorAll() { return []; }
-  getBoundingClientRect() { return { left: 0, right: 100, top: 0, bottom: 100 }; }
+  close() {
+    this.open = false;
+  }
+  querySelectorAll() {
+    return [];
+  }
+  getBoundingClientRect() {
+    return { left: 0, right: 100, top: 0, bottom: 100 };
+  }
 }
 function fixture({ blocked = false, selected = true, fail = false, narration = false } = {}) {
   const nodes = new Map();
@@ -38,16 +56,34 @@ function fixture({ blocked = false, selected = true, fail = false, narration = f
   root.ownerDocument = doc;
   root.querySelector = (selector) => get(selector.match(/id="([^"]+)"/)[1]);
   const audio = new Node();
-  let time = 0, attachments = 0;
+  let time = 0,
+    attachments = 0;
   Object.assign(audio, {
-    src: '', paused: true, ended: false, readyState: 0, duration: 24,
+    src: '',
+    paused: true,
+    ended: false,
+    readyState: 0,
+    duration: 24,
     snapshot: () => ({ time, source: 'unit-clock', audible: !audio.paused }),
-    async play() { audio.paused = false; audio.dispatchEvent(new Event('play')); },
-    pause() { cleanupOrder.push('pause'); audio.paused = true; audio.dispatchEvent(new Event('pause')); },
-    dispose() { cleanupOrder.push('transport'); },
+    async play() {
+      audio.paused = false;
+      audio.dispatchEvent(new Event('play'));
+    },
+    pause() {
+      cleanupOrder.push('pause');
+      audio.paused = true;
+      audio.dispatchEvent(new Event('pause'));
+    },
+    dispose() {
+      cleanupOrder.push('transport');
+    },
     load() {},
     getAttribute: () => audio.src || null,
-    removeAttribute() { audio.src = ''; audio.readyState = 0; time = 0; },
+    removeAttribute() {
+      audio.src = '';
+      audio.readyState = 0;
+      time = 0;
+    },
     attachPCM(data, repeat) {
       attachments++;
       audio.src = `pcm:${attachments}`;
@@ -60,37 +96,68 @@ function fixture({ blocked = false, selected = true, fail = false, narration = f
   audio.attachLoop = audio.attachPCM;
   Object.defineProperty(audio, 'currentTime', {
     get: () => time,
-    set(value) { time = value; queueMicrotask(() => audio.dispatchEvent(new Event('seeked'))); },
+    set(value) {
+      time = value;
+      queueMicrotask(() => audio.dispatchEvent(new Event('seeked')));
+    },
   });
   const requests = [];
   const decode = (request) => {
     let resolve, reject;
-    const promise = new Promise((a, b) => { resolve = a; reject = b; });
+    const promise = new Promise((a, b) => {
+      resolve = a;
+      reject = b;
+    });
     const data = { start: request.start || 0, duration: request.end - request.start || 24 };
     requests.push({ request, resolve: () => resolve(data), reject });
-    if (!blocked) { if (fail) reject(new Error('network')); else resolve(data); }
+    if (!blocked) {
+      if (fail) reject(new Error('network'));
+      else resolve(data);
+    }
     return promise;
   };
   const song = (id) => ({
-    id, title: id, artist: 'test', duration: 24,
+    id,
+    title: id,
+    artist: 'test',
+    duration: 24,
     audio: Object.fromEntries([1, 0.75, 0.5].map((r) => [String(r), { src: `${id}-${r}` }])),
     lines: [1, 7, 13, 19].map((start) => ({
-      start, end: start + 3.8, tokens: [{ jp: '朝', romaji: 'asa', start, end: start + 1 }],
+      start,
+      end: start + 3.8,
+      tokens: [{ jp: '朝', romaji: 'asa', start, end: start + 1 }],
       ...(narration ? { narration: { verySlow: { src: 'read.wav' } } } : {}),
     })),
   });
   const context = {
-    document: doc, window: { location: { search: '' }, matchMedia: () => ({ matches: false }) },
+    document: doc,
+    window: { location: { search: '' }, matchMedia: () => ({ matches: false }) },
     localStorage: { getItem: () => null, setItem() {} },
-    DOMException, AbortController, URLSearchParams, console, queueMicrotask,
-    requestAnimationFrame: () => 1, cancelAnimationFrame() {},
+    DOMException,
+    AbortController,
+    URLSearchParams,
+    console,
+    queueMicrotask,
+    requestAnimationFrame: () => 1,
+    cancelAnimationFrame() {},
     createDirectory: () => ({ render() {}, highlight() {} }),
-    createLyricsView: () => ({ renderTranslation() {}, renderNextLine() {}, renderJapanese() {}, displayRomaji: (t) => t.romaji }),
-    createVocalMixer: () => ({
-      setVolume() {}, setRead() {}, resume: async () => {},
-      dispose: async () => { cleanupOrder.push('mixer'); },
+    createLyricsView: () => ({
+      renderTranslation() {},
+      renderNextLine() {},
+      renderJapanese() {},
+      displayRomaji: (t) => t.romaji,
     }),
-    createPlaybackTransport: () => audio, balanceLyrics() {}, lineVariant,
+    createVocalMixer: () => ({
+      setVolume() {},
+      setRead() {},
+      resume: async () => {},
+      dispose: async () => {
+        cleanupOrder.push('mixer');
+      },
+    }),
+    createPlaybackTransport: () => audio,
+    balanceLyrics() {},
+    lineVariant,
   };
   vm.runInNewContext(`${code};this.factory=createPlayer`, context);
   const readings = [];
@@ -98,10 +165,21 @@ function fixture({ blocked = false, selected = true, fail = false, narration = f
     playable: () => new Promise((resolve) => readings.push(resolve)),
   };
   const controller = context.factory({
-    songs: [song('a'), song('b')], decoder: { full: (r) => decode({ ...r, start: 0, end: 24 }), range: decode }, root,
-    songId: selected ? 'a' : null, cache,
+    songs: [song('a'), song('b')],
+    decoder: { full: (r) => decode({ ...r, start: 0, end: 24 }), range: decode },
+    root,
+    songId: selected ? 'a' : null,
+    cache,
   });
-  return { controller, audio, requests, get, readings, cleanupOrder, attachments: () => attachments };
+  return {
+    controller,
+    audio,
+    requests,
+    get,
+    readings,
+    cleanupOrder,
+    attachments: () => attachments,
+  };
 }
 
 test('catalog commands validate readiness, indices, scopes and rates', async () => {
@@ -115,7 +193,10 @@ test('catalog commands validate readiness, indices, scopes and rates', async () 
   assert.throws(() => c.selectLine(-1), /Invalid lyric/);
   assert.throws(() => c.setRate(2), /Unsupported/);
   assert.throws(() => c.seek(NaN), /finite/);
-  assert.throws(() => c.setPracticeScope({ kind: 'section', startIndex: 3, endIndex: 1 }), /Reversed/);
+  assert.throws(
+    () => c.setPracticeScope({ kind: 'section', startIndex: 3, endIndex: 1 }),
+    /Reversed/,
+  );
   c.setPracticeScope({ kind: 'section', startIndex: 1, endIndex: 2 });
   assert.throws(() => c.selectLine(0), /outside/);
   c.dispose();
@@ -161,12 +242,16 @@ test('subscriptions unsubscribe, commands and DOM events stop after idempotent d
   await flush();
   let updates = 0;
   const unsubscribe = c.subscribe(() => updates++);
-  c.pause(); await flush();
+  c.pause();
+  await flush();
   assert.ok(updates > 0);
-  unsubscribe(); const before = updates;
-  await c.play(); await flush();
+  unsubscribe();
+  const before = updates;
+  await c.play();
+  await flush();
   assert.equal(updates, before);
-  c.dispose(); c.dispose();
+  c.dispose();
+  c.dispose();
   assert.deepEqual(cleanupOrder.slice(-3), ['pause', 'transport', 'mixer']);
   get('play').dispatchEvent(new Event('click'));
   assert.equal(c.getSnapshot().disposed, true);
@@ -179,27 +264,34 @@ test('late decode success and failure cannot reattach audio after switch/dispose
   const f = fixture({ blocked: true });
   const { controller: c, requests } = f;
   c.loadSong('b');
-  requests[0].resolve(); await flush();
+  requests[0].resolve();
+  await flush();
   assert.equal(f.attachments(), 0);
-  requests[1].resolve(); await flush();
+  requests[1].resolve();
+  await flush();
   assert.equal(f.attachments(), 1);
   c.setRate(0.75);
   c.dispose();
-  requests[2].reject(new Error('late network failure')); await flush();
+  requests[2].reject(new Error('late network failure'));
+  await flush();
   assert.equal(f.attachments(), 1);
   assert.equal(c.getSnapshot().error, null);
   const other = fixture({ blocked: true });
-  other.controller.dispose(); other.requests[0].resolve(); await flush();
+  other.controller.dispose();
+  other.requests[0].resolve();
+  await flush();
   assert.equal(other.attachments(), 0);
 });
 
 test('decode errors surface in snapshots and play retries the existing source', async () => {
   const { controller: c, requests } = fixture({ blocked: true });
-  requests[0].reject(new Error('network')); await flush();
+  requests[0].reject(new Error('network'));
+  await flush();
   assert.equal(c.getSnapshot().error.code, 'PLAYBACK_FAILED');
   await c.play();
   assert.equal(requests.length, 2);
-  requests[1].resolve(); await flush();
+  requests[1].resolve();
+  await flush();
   assert.equal(c.getSnapshot().error, null);
   assert.equal(c.getSnapshot().playing, true);
   c.dispose();

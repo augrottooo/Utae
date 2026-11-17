@@ -4,7 +4,11 @@ const result = document.getElementById('probe-result');
 const snapshot = document.getElementById('probe-snapshot');
 const host = document.getElementById('probe-host');
 const mode = new URLSearchParams(location.search).get('root') || 'container';
-let bridge, unsubscribe, catalog, template, notifications = 0;
+let bridge,
+  unsubscribe,
+  catalog,
+  template,
+  notifications = 0;
 const NativeAudioContext = window.AudioContext;
 window.__bridgeProbeContexts = [];
 if (NativeAudioContext) {
@@ -46,8 +50,12 @@ function mountExisting() {
   });
   // Test-only observability; never used by the production page.
   window.bridgeProbe = {
-    bridge, catalog, host,
-    get notifications() { return notifications; },
+    bridge,
+    catalog,
+    host,
+    get notifications() {
+      return notifications;
+    },
   };
   result.textContent = `已挂载：${mode}；命令使用原曲秒数。新 DOM 挂载不代表 AudioContext 已完整释放。`;
   show();
@@ -60,9 +68,15 @@ const actions = {
   section: () => bridge.setPracticeScope({ kind: 'section', startIndex: 1, endIndex: 2 }),
   full: () => bridge.setPracticeScope({ kind: 'full' }),
   rate: () => bridge.setRate(0.75),
-  loop: () => bridge.setLoop(bridge.getSnapshot().loop.kind === 'none' ? bridge.getSnapshot().scope.kind : 'none'),
+  loop: () =>
+    bridge.setLoop(
+      bridge.getSnapshot().loop.kind === 'none' ? bridge.getSnapshot().scope.kind : 'none',
+    ),
   unsubscribe: () => unsubscribe(),
-  dispose: () => { bridge.dispose(); show(); },
+  dispose: () => {
+    bridge.dispose();
+    show();
+  },
   remount: mount,
   sameHost: async () => {
     await bridge.play();
@@ -85,9 +99,10 @@ for (const [name, action] of Object.entries(actions)) {
   document.getElementById(`probe-${name}`).addEventListener('click', async () => {
     try {
       await action();
-      result.textContent = name === 'sameHost'
-        ? `旧 AudioContext=${window.__bridgeProbeContexts.at(-2)?.state || 'not-created'}；已替换 audio 节点，新实例播放中（${bridge.getSnapshot().clockSource}）`
-        : `${name} 已执行（订阅通知 ${notifications} 次）`;
+      result.textContent =
+        name === 'sameHost'
+          ? `旧 AudioContext=${window.__bridgeProbeContexts.at(-2)?.state || 'not-created'}；已替换 audio 节点，新实例播放中（${bridge.getSnapshot().clockSource}）`
+          : `${name} 已执行（订阅通知 ${notifications} 次）`;
       show();
     } catch (error) {
       result.textContent = `${error.name}: ${error.message}`;

@@ -18,7 +18,9 @@ export function createVocalMixer(audio) {
     if (disposed) throw new DOMException('Audio mixer disposed', 'InvalidStateError');
   };
   const disconnect = (node) => {
-    try { node?.disconnect(); } catch {}
+    try {
+      node?.disconnect();
+    } catch {}
   };
   function gains(smooth = false) {
     if (!context) return;
@@ -78,12 +80,23 @@ export function createVocalMixer(audio) {
         gains();
       } catch (error) {
         const failedContext = context;
-        for (const node of [mediaSource, split, backingBus, vocalBus, backing, vocals, narration, output])
+        for (const node of [
+          mediaSource,
+          split,
+          backingBus,
+          vocalBus,
+          backing,
+          vocals,
+          narration,
+          output,
+        ])
           disconnect(node);
         mediaSource = split = backingBus = vocalBus = backing = vocals = narration = output = null;
         context = null;
         if (failedContext) {
-          try { Promise.resolve(failedContext.close()).catch(() => {}); } catch {}
+          try {
+            Promise.resolve(failedContext.close()).catch(() => {});
+          } catch {}
         }
         throw error;
       }
@@ -163,16 +176,30 @@ export function createVocalMixer(audio) {
         const source = primingSource;
         primingSource = null;
         source.onended = null;
-        try { source.stop(); } catch {}
+        try {
+          source.stop();
+        } catch {}
         disconnect(source);
       }
-      for (const node of [mediaSource, split, backingBus, vocalBus, backing, vocals, narration, output])
+      for (const node of [
+        mediaSource,
+        split,
+        backingBus,
+        vocalBus,
+        backing,
+        vocals,
+        narration,
+        output,
+      ])
         disconnect(node);
       mediaSource = split = backingBus = vocalBus = backing = vocals = narration = output = null;
       context = null;
       if (!activeContext || activeContext.state === 'closed') return Promise.resolve();
       try {
-        return Promise.resolve(activeContext.close()).then(() => undefined, () => undefined);
+        return Promise.resolve(activeContext.close()).then(
+          () => undefined,
+          () => undefined,
+        );
       } catch {
         return Promise.resolve();
       }

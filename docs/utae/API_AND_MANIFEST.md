@@ -106,9 +106,7 @@ Utae 对外可以返回业务 wrapper，但必须把播放器输入单独命名�
           "start": 1.0,
           "end": 4.0,
           "translation": "我喜欢你",
-          "tokens": [
-            { "jp": "君", "kana": "きみ", "romaji": "kimi", "start": 1.0, "end": 1.7 }
-          ]
+          "tokens": [{ "jp": "君", "kana": "きみ", "romaji": "kimi", "start": 1.0, "end": 1.7 }]
         }
       ]
     },
@@ -125,15 +123,15 @@ Utae 对外可以返回业务 wrapper，但必须把播放器输入单独命名�
 
 上面的 `playerSong` 只是字段映射示意：真实 Sorane 行要求、`audio` 变体、可选 `chunks`、`narration`、`clipStart/clipEnd`、token 区间和资产路径必须以源码/fixture 核对。特别是：
 
-| Utae 业务字段 | Sorane Player 字段 | 转换要求 |
-| --- | --- | --- |
-| `song_package_version.schema_version` | `playerSong.schemaVersion` | 原样传递并做兼容检查；不是 Utae package version |
-| `song_package_version.package_version` | 不存在 | 只留在 wrapper，不能写进假设的 Player schema |
-| `song.title/artist` | `playerSong.title/artist` | 字符串原样映射 |
-| `song.duration_ms` | `playerSong.duration` | `duration = duration_ms / 1000`，由适配层一次转换 |
-| `version_lyric_line.start_ms/end_ms` | `line.start/end` | 毫秒转秒：`seconds = milliseconds / 1000`；适配层统一处理浮点精度、边界舍入和往返误差并写测试 |
-| `version_lyric_line.source_line_id` | `line.id` | 只作为当前包的 source ID；Utae 逻辑/版本行 ID 不直接替换它 |
-| `lyric_token.text/kana/romaji` | `token.jp/kana/romaji` | 逐 token 映射；token 时间从毫秒除以 1000 转为秒，Player 时间回写时乘以 1000 并按最近整数毫秒舍入 |
-| `candidate_asset` / `package_version_asset` | `playerSong.audio.*.src`, `playerChunks`, `line.narration.*.src` | 生成授权 asset URL；chunk manifest 的顶层索引结构保留；不把 MinIO object key 传给浏览器 |
+| Utae 业务字段                               | Sorane Player 字段                                               | 转换要求                                                                                         |
+| ------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `song_package_version.schema_version`       | `playerSong.schemaVersion`                                       | 原样传递并做兼容检查；不是 Utae package version                                                  |
+| `song_package_version.package_version`      | 不存在                                                           | 只留在 wrapper，不能写进假设的 Player schema                                                     |
+| `song.title/artist`                         | `playerSong.title/artist`                                        | 字符串原样映射                                                                                   |
+| `song.duration_ms`                          | `playerSong.duration`                                            | `duration = duration_ms / 1000`，由适配层一次转换                                                |
+| `version_lyric_line.start_ms/end_ms`        | `line.start/end`                                                 | 毫秒转秒：`seconds = milliseconds / 1000`；适配层统一处理浮点精度、边界舍入和往返误差并写测试    |
+| `version_lyric_line.source_line_id`         | `line.id`                                                        | 只作为当前包的 source ID；Utae 逻辑/版本行 ID 不直接替换它                                       |
+| `lyric_token.text/kana/romaji`              | `token.jp/kana/romaji`                                           | 逐 token 映射；token 时间从毫秒除以 1000 转为秒，Player 时间回写时乘以 1000 并按最近整数毫秒舍入 |
+| `candidate_asset` / `package_version_asset` | `playerSong.audio.*.src`, `playerChunks`, `line.narration.*.src` | 生成授权 asset URL；chunk manifest 的顶层索引结构保留；不把 MinIO object key 传给浏览器          |
 
 适配器必须拒绝缺少必需 `id/title/artist/duration/audio/lines`、越界时间、token 顺序错误、不可访问资产或未知 schema 版本；不能未经源码核对就声称“完全兼容 Sorane”。

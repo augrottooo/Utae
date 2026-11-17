@@ -4,12 +4,12 @@ Learning Agent 由 Java 后端管理，目标是根据真实学习数据给出�
 
 ## 白名单工具
 
-| 工具 | 权限 | 作用 |
-| --- | --- | --- |
-| `get_recent_learning` | READ | 读取当前用户最近学习事件和进度 |
-| `get_song_detail` | READ | 读取用户有权访问的歌曲和歌词摘要 |
-| `get_line_pronunciation` | READ | 读取原文、罗马音、翻译和朗读资产状态 |
-| `create_review_task` | WRITE | 为当前用户创建复习任务 |
+| 工具                     | 权限  | 作用                                 |
+| ------------------------ | ----- | ------------------------------------ |
+| `get_recent_learning`    | READ  | 读取当前用户最近学习事件和进度       |
+| `get_song_detail`        | READ  | 读取用户有权访问的歌曲和歌词摘要     |
+| `get_line_pronunciation` | READ  | 读取原文、罗马音、翻译和朗读资产状态 |
+| `create_review_task`     | WRITE | 为当前用户创建复习任务               |
 
 每个工具注册 name、描述、JSON Schema、权限、超时、输入校验、输出 Schema 和 Service executor。未知工具直接 `BLOCKED`。
 

@@ -3,7 +3,7 @@ import { alignReadings, balanceLyrics } from './layout.js';
 export function createLyricsView({ current, next, root = document, eventSignal }) {
   const doc = root.ownerDocument || root;
   const page = root === doc ? doc.documentElement : root;
-  const $ = (id) => root === doc ? doc.getElementById(id) : root.querySelector(`[id="${id}"]`);
+  const $ = (id) => (root === doc ? doc.getElementById(id) : root.querySelector(`[id="${id}"]`));
   try {
     $('translation-toggle').checked = localStorage.getItem('lyrics-translation') === 'true';
   } catch {}
@@ -55,39 +55,55 @@ export function createLyricsView({ current, next, root = document, eventSignal }
     }
     alignReadings([[...$('next-tokens').children]]);
   }
-  $('next-line-toggle').addEventListener('change', () => {
-    renderNextLine();
-    try {
-      localStorage.setItem('lyrics-next-line', String($('next-line-toggle').checked));
-    } catch {}
-  }, { signal: eventSignal });
-  $('translation-toggle').addEventListener('change', () => {
-    renderTranslation();
-    try {
-      localStorage.setItem('lyrics-translation', String($('translation-toggle').checked));
-    } catch {}
-  }, { signal: eventSignal });
-  $('mora-toggle').addEventListener('change', () => {
-    page.classList.toggle('mora-enabled', $('mora-toggle').checked);
-    root
-      .querySelectorAll('.word .romaji')
-      .forEach((node, i) => (node.textContent = displayRomaji(current().tokens[i])));
-    renderNextLine();
-    balanceLyrics($('tokens'), $('next-tokens'));
-    try {
-      localStorage.setItem('lyrics-mora', String($('mora-toggle').checked));
-    } catch {}
-  }, { signal: eventSignal });
-  $('kana-toggle').addEventListener('change', () => {
-    root
-      .querySelectorAll('.word .jp')
-      .forEach((node, i) => renderJapanese(node, current().tokens[i]));
-    renderNextLine();
-    balanceLyrics($('tokens'), $('next-tokens'));
-    try {
-      localStorage.setItem('lyrics-kana', String($('kana-toggle').checked));
-    } catch {}
-  }, { signal: eventSignal });
+  $('next-line-toggle').addEventListener(
+    'change',
+    () => {
+      renderNextLine();
+      try {
+        localStorage.setItem('lyrics-next-line', String($('next-line-toggle').checked));
+      } catch {}
+    },
+    { signal: eventSignal },
+  );
+  $('translation-toggle').addEventListener(
+    'change',
+    () => {
+      renderTranslation();
+      try {
+        localStorage.setItem('lyrics-translation', String($('translation-toggle').checked));
+      } catch {}
+    },
+    { signal: eventSignal },
+  );
+  $('mora-toggle').addEventListener(
+    'change',
+    () => {
+      page.classList.toggle('mora-enabled', $('mora-toggle').checked);
+      root
+        .querySelectorAll('.word .romaji')
+        .forEach((node, i) => (node.textContent = displayRomaji(current().tokens[i])));
+      renderNextLine();
+      balanceLyrics($('tokens'), $('next-tokens'));
+      try {
+        localStorage.setItem('lyrics-mora', String($('mora-toggle').checked));
+      } catch {}
+    },
+    { signal: eventSignal },
+  );
+  $('kana-toggle').addEventListener(
+    'change',
+    () => {
+      root
+        .querySelectorAll('.word .jp')
+        .forEach((node, i) => renderJapanese(node, current().tokens[i]));
+      renderNextLine();
+      balanceLyrics($('tokens'), $('next-tokens'));
+      try {
+        localStorage.setItem('lyrics-kana', String($('kana-toggle').checked));
+      } catch {}
+    },
+    { signal: eventSignal },
+  );
 
   return { renderTranslation, renderNextLine, renderJapanese, displayRomaji };
 }

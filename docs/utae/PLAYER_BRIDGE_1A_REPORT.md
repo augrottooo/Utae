@@ -12,20 +12,20 @@
 
 ## 修改文件与依赖方向
 
-| 文件 | 变化 |
-| --- | --- |
-| `web/src/player.js` | 返回 controller；复用现有闭包、transport 和时间映射；加入快照、订阅、取消、命令校验及控制器销毁 |
-| `web/src/lyrics.js` | 接收 root 和事件 AbortSignal；取消显示选项的监听器 |
-| `web/src/directory.js` | 接收 root 和事件 AbortSignal；取消动态目录按钮监听器 |
-| `web/src/layout.js` | 显式传入下一句容器；观察器返回清理函数，阻止迟到字体回调 |
-| `web/src/player-bridge.js` | 从已有 schema 1 catalog 创建 cache、decoder、chunk engine 和 controller，持有布局观察器 |
-| `web/src/audio/mixer.js` | mixer 幂等 dispose，断开常驻图、停止预热 source、安全关闭独占 context |
-| `web/src/audio/transport.js` | transport 幂等 dispose，移除原生媒体监听器并停止/清理活动循环会话 |
-| `web/bridge-probe.html`、`web/src/bridge-probe.js` | 静态验证入口；从已有 `index.html` 读取 DOM，不复制整页播放器实现 |
-| `tests/player-controller.test.js` | 6 组命令、快照、生命周期、失败和过期结果测试 |
-| `tests/player-view-lifecycle.test.js` | 2 组目录监听器及布局观察器释放测试 |
-| `tests/audio-lifecycle.test.js` | Mixer/Transport 释放、context close、media listener 和 source-node 关联测试 |
-| `tests/player-bridge-lifecycle.test.js` | 验证 Bridge dispose 后替换整个 audio DOM 节点 |
+| 文件                                               | 变化                                                                                            |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `web/src/player.js`                                | 返回 controller；复用现有闭包、transport 和时间映射；加入快照、订阅、取消、命令校验及控制器销毁 |
+| `web/src/lyrics.js`                                | 接收 root 和事件 AbortSignal；取消显示选项的监听器                                              |
+| `web/src/directory.js`                             | 接收 root 和事件 AbortSignal；取消动态目录按钮监听器                                            |
+| `web/src/layout.js`                                | 显式传入下一句容器；观察器返回清理函数，阻止迟到字体回调                                        |
+| `web/src/player-bridge.js`                         | 从已有 schema 1 catalog 创建 cache、decoder、chunk engine 和 controller，持有布局观察器         |
+| `web/src/audio/mixer.js`                           | mixer 幂等 dispose，断开常驻图、停止预热 source、安全关闭独占 context                           |
+| `web/src/audio/transport.js`                       | transport 幂等 dispose，移除原生媒体监听器并停止/清理活动循环会话                               |
+| `web/bridge-probe.html`、`web/src/bridge-probe.js` | 静态验证入口；从已有 `index.html` 读取 DOM，不复制整页播放器实现                                |
+| `tests/player-controller.test.js`                  | 6 组命令、快照、生命周期、失败和过期结果测试                                                    |
+| `tests/player-view-lifecycle.test.js`              | 2 组目录监听器及布局观察器释放测试                                                              |
+| `tests/audio-lifecycle.test.js`                    | Mixer/Transport 释放、context close、media listener 和 source-node 关联测试                     |
+| `tests/player-bridge-lifecycle.test.js`            | 验证 Bridge dispose 后替换整个 audio DOM 节点                                                   |
 
 原页面 `index.html` 和 `main.js` 保留。默认 `createPlayer` 仍按 document 查找元素；原页面可以忽略新增返回值。新 Bridge 调用同一 `createPlayer`，不会拥有另一套播放时钟。静态验证页用 `root=global` 和 `root=container` 对照，尚未确定 React 的最终 DOM 方案。
 
@@ -33,7 +33,9 @@
 
 ```js
 const bridge = createPlayerBridge({ catalog, root, songId });
-const stop = bridge.subscribe((snapshot) => { /* 更新宿主视图 */ });
+const stop = bridge.subscribe((snapshot) => {
+  /* 更新宿主视图 */
+});
 bridge.loadSong('id-in-catalog');
 bridge.setPracticeScope({ kind: 'section', startIndex: 1, endIndex: 2 });
 await bridge.play();
@@ -58,16 +60,16 @@ bridge.dispose();
 
 ## 验证结果与边界
 
-| 检查 | 本轮结果 |
-| --- | --- |
-| 修改前上游 JS | 3/3 通过 |
-| 实际项目最终 JS | 17/17 通过（3 上游 + 14 新增） |
-| Python | 7/7 通过，未修改 Python 项目代码 |
-| demo/build | 生成并构建 1 首上游合成音 schema 1 包成功 |
-| 语法 / `git diff --check` | 5 个变更 JS 文件 `node --check` 通过；实际项目 `git diff --check` 通过 |
-| ESLint / Prettier | 已尝试，执行失败：未安装的开发依赖导致命令不可用；本轮未安装依赖，不能报为 lint/format 通过 |
-| 浏览器生命周期复验 | 用户手动验收通过：旧 AudioContext=closed，替换 audio 节点后新实例播放；后续手动暂停正常 |
-| 真实歌曲、人声朗读、移动设备 | 未覆盖；合成音不能替代真人试听 |
+| 检查                         | 本轮结果                                                                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------- |
+| 修改前上游 JS                | 3/3 通过                                                                                    |
+| 实际项目最终 JS              | 17/17 通过（3 上游 + 14 新增）                                                              |
+| Python                       | 7/7 通过，未修改 Python 项目代码                                                            |
+| demo/build                   | 生成并构建 1 首上游合成音 schema 1 包成功                                                   |
+| 语法 / `git diff --check`    | 5 个变更 JS 文件 `node --check` 通过；实际项目 `git diff --check` 通过                      |
+| ESLint / Prettier            | 已尝试，执行失败：未安装的开发依赖导致命令不可用；本轮未安装依赖，不能报为 lint/format 通过 |
+| 浏览器生命周期复验           | 用户手动验收通过：旧 AudioContext=closed，替换 audio 节点后新实例播放；后续手动暂停正常     |
+| 真实歌曲、人声朗读、移动设备 | 未覆盖；合成音不能替代真人试听                                                              |
 
 控制器测试用替身隔离 transport、DOM、mixer 与 decoder；验证控制器逻辑，不构成真实媒体集成通过。Mixer/Transport 生命周期测试使用 Web Audio/EventTarget 替身核验调用和节点释放；真实 `AudioContext.state === 'closed'` 另由本轮用户手动浏览器验收确认。上游音频调度测试保留。
 
@@ -110,22 +112,21 @@ git diff --check
 
 浏览器步骤：刷新验证页，点击播放后等待音频 context 初始化，点“同宿主重挂（测试替换 audio）”。按钮会 dispose 当前实例、由 Bridge 替换 `<audio>` 节点、在相同宿主 DOM 创建新实例并再次请求播放。确认快照恢复、无 `InvalidStateError`、新实例可暂停/seek；然后销毁。DevTools 可额外查看旧 context 最终为 `closed`。直接复用旧 `HTMLAudioElement` 创建新 mixer 应按设计拒绝/不支持。
 
-
 ## 最终验收归档（2026-11-16）
 
 阶段状态：**1A 完成；1B 未开始**。用户已明确确认生命周期验收及 1A 其他浏览器测试通过。
 
-| 验收项 | 结果与证据 |
-| --- | --- |
-| JavaScript 回归 | 实际项目 17/17 通过，覆盖原有调度、时间映射及新增生命周期、controller、snapshot、订阅和取消 |
-| Python 回归 | 实际项目 7/7 通过，覆盖格式、构建和静态服务 |
-| AudioContext 关闭 | 浏览器手动通过：验证页输出 `旧 AudioContext=closed` |
-| AudioNode 清理 | 源码与自动化通过：常驻图断开、未结束预热 source 停止/断开，活动 PCM source 停止/断开；原有 chunk 清理路径及测试保留。未做浏览器堆快照或逐节点内存测量 |
-| Transport 监听器移除 | 源码与自动化通过：移除自身注册的原生媒体监听器；dispose 后派发媒体事件不再转发，重复 dispose 安全 |
-| Player 清理顺序 | 自动化通过：先停止播放、清理 transport，再清理 mixer；公开 snapshot 和订阅回归通过 |
-| 新 audio 元素重新初始化 | 浏览器手动通过：Bridge 替换整个 audio 元素，新实例进入 `audio-context-chunks` 播放，无 InvalidStateError |
-| 同一旧 audio 元素复用 | 明确不支持；关闭 context 不解除媒体源关联。自动化验证该限制，Host 以替换元素处理 |
-| 重挂后的暂停 | 用户确认快照 `playing=false`、`playIntent=false` 来自后来手动暂停；不属于重挂失败 |
+| 验收项                  | 结果与证据                                                                                                                                            |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| JavaScript 回归         | 实际项目 17/17 通过，覆盖原有调度、时间映射及新增生命周期、controller、snapshot、订阅和取消                                                           |
+| Python 回归             | 实际项目 7/7 通过，覆盖格式、构建和静态服务                                                                                                           |
+| AudioContext 关闭       | 浏览器手动通过：验证页输出 `旧 AudioContext=closed`                                                                                                   |
+| AudioNode 清理          | 源码与自动化通过：常驻图断开、未结束预热 source 停止/断开，活动 PCM source 停止/断开；原有 chunk 清理路径及测试保留。未做浏览器堆快照或逐节点内存测量 |
+| Transport 监听器移除    | 源码与自动化通过：移除自身注册的原生媒体监听器；dispose 后派发媒体事件不再转发，重复 dispose 安全                                                     |
+| Player 清理顺序         | 自动化通过：先停止播放、清理 transport，再清理 mixer；公开 snapshot 和订阅回归通过                                                                    |
+| 新 audio 元素重新初始化 | 浏览器手动通过：Bridge 替换整个 audio 元素，新实例进入 `audio-context-chunks` 播放，无 InvalidStateError                                              |
+| 同一旧 audio 元素复用   | 明确不支持；关闭 context 不解除媒体源关联。自动化验证该限制，Host 以替换元素处理                                                                      |
+| 重挂后的暂停            | 用户确认快照 `playing=false`、`playIntent=false` 来自后来手动暂停；不属于重挂失败                                                                     |
 
 浏览器证据由用户手动提供，自动化 UI 工具因审批服务模型 404 未能执行。用户反馈包含 `旧 AudioContext=closed；已替换 audio 节点，新实例播放中（audio-context-chunks）`；浏览器版本和具体设备型号未记录，不推定为跨浏览器/移动设备覆盖。
 
