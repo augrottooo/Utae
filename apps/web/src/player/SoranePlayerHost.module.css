@@ -1,0 +1,52 @@
+.host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.bar button {
+  min-height: 34px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--green-light);
+  color: var(--ink);
+}
+.bar output {
+  flex: 1;
+  color: var(--muted);
+  font-size: 12px;
+}
+.context {
+  margin: 0;
+  padding: 6px 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.error {
+  color: #b74431;
+  padding: 8px 16px;
+  margin: 0;
+}
+.snapshot {
+  flex: none;
+  max-height: 160px;
+  margin: 0;
+  padding: 8px 16px;
+  overflow: auto;
+  font-size: 11px;
+}
+.player {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}

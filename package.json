@@ -7,12 +7,28 @@
     "test": "node --test tests/*.test.js",
     "format": "prettier --write web tests docs examples README.md package.json compose.yaml .github eslint.config.js",
     "format:check": "prettier --check web tests docs examples README.md package.json compose.yaml .github eslint.config.js",
-    "lint": "eslint web/src"
+    "lint": "eslint web/src",
+    "prepare:player": "node scripts/prepare-player-assets.mjs",
+    "dev": "node scripts/prepare-player-assets.mjs && npm run dev --workspace @utae/web",
+    "build": "node scripts/prepare-player-assets.mjs && npm run build --workspace @utae/web",
+    "preview": "npm run preview --workspace @utae/web",
+    "typecheck": "tsc --noEmit",
+    "test:frontend": "vitest run",
+    "format:host": "prettier --check apps/web/src apps/web/index.html apps/web/package.json apps/web/vite.config.ts packages scripts tests/frontend tsconfig.json vitest.config.ts"
   },
   "devDependencies": {
     "eslint": "10.13.0",
     "globals": "17.13.0",
-    "prettier": "3.6.2"
+    "prettier": "3.6.2",
+    "@types/node": "24.5.2",
+    "@types/react": "19.1.16",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react": "5.0.4",
+    "vite": "7.1.7",
+    "typescript": "5.9.2",
+    "vitest": "3.2.4",
+    "jsdom": "26.1.0",
+    "@testing-library/react": "16.3.0"
   },
   "engines": {
     "node": ">=24"
@@ -27,5 +43,9 @@
   },
   "bugs": {
     "url": "https://github.com/SuperJuice666/sorane-player/issues"
-  }
+  },
+  "workspaces": [
+    "apps/web",
+    "packages/player-bridge"
+  ]
 }
