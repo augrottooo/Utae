@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
-    include: ['packages/player-bridge/src/**/*.test.ts', 'tests/frontend/**/*.test.tsx'],
+    include: ['packages/player-bridge/src/**/*.test.ts', 'tests/frontend/**/*.test.{ts,tsx}'],
     setupFiles: ['tests/frontend/setup.ts'],
     restoreMocks: true,
   },

@@ -53,6 +53,8 @@
 
 依赖：阶段 1B 通过、1C 歌曲包链路收尾；API 暂用有版本的 Mock contract。
 
+状态（2026-11-18）：**本地页面与 Mock 候选已实现，未提交、未推送**。包含基础曲库/搜索、歌曲详情/练习、演示会话、我的歌曲空/权限状态、提交表单和模拟任务详情；没有接入 Java、数据库、对象存储或 Studio。自动化及本轮代理浏览器核对见 [阶段 2 报告](FRONTEND_STAGE2_REPORT.md)。1C 与阶段 2 需按范围分别准备提交，不能把 Mock 验收等同于真实业务链路验收。
+
 - App Shell、登录状态、基础曲库、我的歌曲、歌曲详情/练习页、上传和任务状态页面。
 - React Router + TanStack Query + Zustand（仅 UI 状态），播放状态只来自 Bridge。
 - 完成 Utae wrapper 到 Sorane song entry 的 fixture 映射测试。

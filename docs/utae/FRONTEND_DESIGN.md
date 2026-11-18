@@ -61,3 +61,13 @@ API client 使用同源 `/api` base URL，Fetch/Axios 请求携带 Cookie creden
 本地入口与练习路由共用经过运行时校验的 catalog。目录支持 loading/empty/error/retry；选中歌曲再检查引用资产，期间不挂载播放器，失败可重试。路由离开取消请求，返回缓存歌曲时等待新的预检结果，避免已失效资产沿用旧成功状态。完整音频与可选分块、人声 parts、读音 URL 从同一个包映射。
 
 React Query 管理包/资源加载状态，`SoranePlayerHost` 管理会话挂载；Sorane 快照是播放状态的唯一来源。旧播放请求失败不会污染新会话。本轮自动化覆盖这些路径；1B 用户实际网页验收不重复执行。真实公开歌曲包的桌面功能已验证；完整逐词听审和移动设备仍待验证，见 [1C 报告](PLAYER_BRIDGE_1C_REPORT.md)。
+
+## 阶段 2 本地页面候选（2026-11-18）
+
+上文 1B 段落描述该阶段冻结结果。当前候选新增 `/library`（`/` 同样可访问）、`/mine`、`/songs/:songId`、`/uploads/new`、`/processing/jobs/:jobId`；练习路由沿用 1C 资产预检与 Bridge，不增加播放状态存储。
+
+曲库、详情读取同一个本地 catalog，提供搜索、加载、空结果、错误和重试。`mock-api.ts` 用版本为 `utae-api-v1` 的 Mock envelope 包装契约夹具，将业务毫秒摘要与保留原秒数的 `playerSong`/`playerChunks` 分开；它不是运行中的 HTTP API，`mock-2026-01` 也不是正式发布版本。
+
+Zustand 的演示登录标记及任务元数据保存在 `sessionStorage`，仅便于同标签页刷新演示；没有 token、真实 userId、服务端身份或真实权限保障。未登录时我的歌曲/上传/任务页面显示登录提示。表单仅记录名称、歌手和所选文件名，不读取或上传文件，模拟任务固定排队、不会自动推进。任务创建不代表已实现正式 API 的 Song/InputRevision → ProcessingJob 两步流程；真实 API、授权与制作属于后续阶段。
+
+源码、测试与浏览器证据边界见 [阶段 2 报告](FRONTEND_STAGE2_REPORT.md)。

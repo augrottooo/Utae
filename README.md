@@ -124,3 +124,7 @@ npm run dev --workspace @utae/web -- --host 127.0.0.1 --port 5174 --strictPort
 - [Codex 工作流](docs/utae/CODEX_WORKFLOW.md)
 
 阶段 1A、1B 已完成并推送；1C 本地包加载与真实歌曲包桌面验收见 [1C 报告](docs/utae/PLAYER_BRIDGE_1C_REPORT.md)。项目内仍只有合成音包；真实公开演示包已在隔离目录验证，歌曲资源不纳入 Git。完整听审和移动设备矩阵未覆盖。
+
+## 阶段 2 页面候选
+
+本地未提交候选已提供曲库（`/`、`/library`）、搜索、歌曲详情、练习、我的歌曲、提交歌曲和模拟任务页面。模拟登录只切换演示界面状态；任务仅保存本标签页元数据，刷新可恢复，不上传音频、不运行 Studio，也没有真实账户或业务 API。现有播放器收藏仍为本机存储。页面继续使用上述 React 启动与构建命令；详细边界和测试见 [阶段 2 报告](docs/utae/FRONTEND_STAGE2_REPORT.md)。当前 GitHub Pages 继续部署上游演示，不代表这些 React 页面已在线发布。
