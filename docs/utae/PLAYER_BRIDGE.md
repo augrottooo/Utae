@@ -1,6 +1,6 @@
 # PlayerBridge 集成方案
 
-阶段状态（2026-11-17）：**1A 完成；1B 本轮验收通过，待确认提交**。1A 格式修复提交 `39ef91f` 已推送，checks #3 与 demo #3 成功（用户确认）。1B React 宿主已实现，类型检查、前端 9/9、JS 17/17、Python 7/7、格式、ESLint 和生产构建通过；用户确认当前网页的页面、路由、刷新及相关功能正常。1A 历史证据见 [1A 报告](PLAYER_BRIDGE_1A_REPORT.md)，1B 证据见 [1B 报告](PLAYER_BRIDGE_1B_REPORT.md)。下面区分冻结基线、已交付适配器与后续目标契约。
+阶段状态（2026-11-17）：**1A、1B 完成并推送**，当前开发基线为 `5fc32044`，checks #4、demo #4 及 1B 用户浏览器验收通过（用户确认）。本轮 1C 本地歌曲包加载与校验的实现、测试及真实歌曲包桌面验证及剩余限制见 [1C 报告](PLAYER_BRIDGE_1C_REPORT.md)。[1A 报告](PLAYER_BRIDGE_1A_REPORT.md) 和 [1B 报告](PLAYER_BRIDGE_1B_REPORT.md) 保留原阶段证据；下面完整 Bridge API 仍是目标契约。
 
 ## 事实边界
 
@@ -129,3 +129,11 @@ Only after 1A and 1B pass may the team decide whether any proven modules should 
 1B 的 `SoranePlayerHost` 已持有 Bridge session，并在卸载、切歌和显式重挂时 dispose；单实例锁在正常清理及初始化失败时均释放。1A 的 Bridge 持有 controller、订阅和布局观察；controller 先停 transport、清理会话及监听器，再释放 mixer 图并关闭 mixer 独占的 AudioContext。context 仅在同一实例内部由 mixer、transport 和 chunk session 共用，未采用跨播放器全局 context。关闭 context 不解除原 audio 的媒体源关联，Host 采用替换整个 audio 元素的策略。
 
 cache、decoder 和 chunk engine 由每次工厂调用创建，持久 Cache Storage 可共享；1A 没有新增缓存驱逐或全部后台下载取消接口。浏览器自动播放拒绝、网络等待、解码失败和歌曲制作失败仍是不同状态。1A 的浏览器证据及其范围以报告为准。
+
+## 1C 已实现的加载边界
+
+`loadCatalog` 获取 Python build 的公开 `library.json`，先 `validateCatalog` 再 `rebaseCatalog`；校验必需字段、原曲秒数、歌词/token、读音相对时间、分块帧覆盖和包内路径。URL 映射保留顶层 chunks 键、双声部 parts、完整音频 fallback 和扩展字段，不改变上游 schema。
+
+练习页通过 Query 的 AbortSignal 对所选歌曲的整曲/分块/双声部/读音 URL 做有界预检（每批最多 4 个）。HEAD 不支持时退回 `Range: bytes=0-0` 并取消响应体；预检不解码音频，服务器忽略 Range 时无法保证只传一个字节。缺失、空响应、HTML 回退或重定向阻止挂载，可重试；离页取消，返回缓存歌曲也需预检成功。此检查只证明请求时资源可访问，不能证明解码或听感正确，也不能保证之后网络不变。
+
+真实包验收发现 Host 隐藏整个 `.topbar` 使歌词目录不可达，现改为只隐藏 React 已接管的 `.song-title`，保留上游歌词目录按钮和原控制器事件路径。Host 仍经现有 `mountPlayerHost` 创建/销毁 Bridge；旧 play Promise 的拒绝只允许更新原活动会话。没有增加跨 catalog 的 `loadPackage` API，没有修改 Sorane 音频核心、第二套时钟或播放状态。

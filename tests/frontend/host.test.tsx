@@ -135,3 +135,25 @@ describe('React host lifecycle', () => {
     next.dispose();
   });
 });
+
+it('a rejected old play request after switching songs cannot display an error in the new host', async () => {
+  const catalog = catalogFixture();
+  const view = render(<SoranePlayerHost catalog={catalog} songId="a" />);
+  let reject!: (cause: Error) => void;
+  vi.mocked(players[0].bridge.play).mockImplementationOnce(
+    () => new Promise((_, fail) => (reject = fail)),
+  );
+  fireEvent.click(screen.getByRole('button', { name: /^播放$/ }));
+  view.rerender(<SoranePlayerHost catalog={catalog} songId="b" />);
+  await act(async () => reject(new Error('old song failed')));
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect(players[0].unsubscribe).toHaveBeenCalledTimes(1);
+  expect(document.querySelectorAll('audio')).toHaveLength(1);
+});
+
+it('retains the upstream lyric directory control while hiding only the routed song picker', () => {
+  render(<SoranePlayerHost catalog={catalogFixture()} songId="a" />);
+  expect(screen.getByRole('button', { name: /^歌词$/ })).toBeTruthy();
+  expect(document.querySelector<HTMLElement>('.song-title')?.hidden).toBe(true);
+  expect(document.querySelector<HTMLElement>('.topbar')?.hidden).toBe(false);
+});

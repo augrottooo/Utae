@@ -10,6 +10,7 @@ const emptySnapshot = () => null;
 export function SoranePlayerHost({ catalog, songId }: { catalog: Catalog; songId: string }) {
   const container = useRef<HTMLDivElement>(null);
   const [session, setSession] = useState<PlayerSession | null>(null);
+  const activeSession = useRef<PlayerSession | null>(null);
   const [generation, setGeneration] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const showSnapshot = useUiStore((state) => state.showSnapshot);
@@ -25,11 +26,14 @@ export function SoranePlayerHost({ catalog, songId }: { catalog: Catalog; songId
     setError(null);
     try {
       const mounted = mountPlayerHost({ container: container.current, markup, catalog, songId });
+      activeSession.current = mounted;
       setSession(mounted);
       return () => {
+        activeSession.current = null;
         mounted.dispose();
       };
     } catch (cause) {
+      activeSession.current = null;
       setSession(null);
       setError(cause instanceof Error ? cause.message : '播放器初始化失败。');
     }
@@ -42,7 +46,7 @@ export function SoranePlayerHost({ catalog, songId }: { catalog: Catalog; songId
     try {
       // Play resolve only accepts the request; actual playing comes from the snapshot.
       Promise.resolve(action()).catch((cause: unknown) => {
-        if (!session?.getSnapshot().disposed)
+        if (activeSession.current === session && !session?.getSnapshot().disposed)
           setError(cause instanceof Error ? cause.message : '播放请求失败。');
       });
     } catch (cause) {

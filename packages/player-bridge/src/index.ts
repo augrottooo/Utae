@@ -2,6 +2,8 @@ import { createPlayerBridge } from '../../../web/src/player-bridge.js';
 import type { BridgeFactory, Catalog, PlayerBridge, PlayerSnapshot } from './types.ts';
 export type * from './types.ts';
 export { rebaseCatalog } from './catalog.ts';
+export { validateCatalog, songAssets } from './validate.ts';
+export { loadCatalog, checkSongAssets } from './load.ts';
 
 export interface PlayerSession {
   bridge: PlayerBridge;
@@ -34,8 +36,8 @@ export function mountPlayerHost(
   const doc = container.ownerDocument;
   const parsed = new DOMParser().parseFromString(markup, 'text/html');
   parsed.querySelectorAll('script').forEach((node) => node.remove());
-  // React owns the song route and heading; the hidden nodes remain available to createPlayer.
-  const heading = parsed.querySelector<HTMLElement>('.topbar');
+  // React owns the song route/title; retain upstream's lyric-directory button for range selection.
+  const heading = parsed.querySelector<HTMLElement>('.song-title');
   if (heading) heading.hidden = true;
   container.replaceChildren(
     ...Array.from(parsed.body.children, (node) => doc.importNode(node, true)),

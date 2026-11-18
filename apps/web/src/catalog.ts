@@ -1,12 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { rebaseCatalog, type Catalog } from '@utae/player-bridge';
+import { checkSongAssets, loadCatalog, type Catalog } from '@utae/player-bridge';
 
-export async function loadLocalCatalog(signal?: AbortSignal): Promise<Catalog> {
+export function loadLocalCatalog(signal?: AbortSignal): Promise<Catalog> {
   const url = new URL('/sorane/library.json', window.location.origin);
-  const response = await fetch(url, { signal, cache: 'no-cache' });
-  if (!response.ok)
-    throw new Error(`本地歌曲包加载失败（HTTP ${response.status}）。请先构建并准备静态资源。`);
-  return rebaseCatalog((await response.json()) as Catalog, response.url || url.href);
+  return loadCatalog(url.href, signal);
 }
 
 export function useLocalCatalog() {
@@ -14,6 +11,20 @@ export function useLocalCatalog() {
     queryKey: ['local-sorane-catalog'],
     queryFn: ({ signal }) => loadLocalCatalog(signal),
     staleTime: Infinity,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useSongAssets(catalog: Catalog | undefined, songId: string | undefined) {
+  return useQuery({
+    queryKey: ['local-song-assets', catalog, songId],
+    enabled: !!catalog?.songs.some((song) => song.id === songId),
+    queryFn: async ({ signal }) => {
+      await checkSongAssets(catalog!, songId!, signal);
+      return true;
+    },
+    staleTime: 0,
     retry: false,
     refetchOnWindowFocus: false,
   });

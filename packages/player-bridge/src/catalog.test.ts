@@ -9,13 +9,13 @@ it('rebases full audio, narration, chunk keys and stereo parts without changing 
   catalog.chunks = {
     'assets/one.wav': {
       sampleRate: 44100,
-      frames: 44100,
+      frames: 24 * 44100,
       chunks: [
         {
           src: 'assets/back.wav',
           parts: ['assets/back.wav', 'assets/vocal.wav'],
           first: 0,
-          last: 44100,
+          last: 24 * 44100,
         },
       ],
     },
@@ -43,6 +43,6 @@ it('rejects unsupported catalogs and assets outside the prepared static director
     '目录内',
   );
   expect(() =>
-    rebaseCatalog({ schemaVersion: 1, songs: [] }, 'http://localhost/library.json'),
-  ).toThrow('非空');
+    rebaseCatalog({ schemaVersion: 2, songs: [] }, 'http://localhost/library.json'),
+  ).toThrow('schemaVersion');
 });

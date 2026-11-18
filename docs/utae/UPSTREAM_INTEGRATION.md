@@ -2,13 +2,13 @@
 
 ## 核查范围和版本
 
-本文件保留 `80f04d6` 提交的历史源码核查基线，下面 Player 源码章节及版本列表描述该冻结基线。当前集成状态（2026-11-17）：**1A 已完成；1B 本轮验收通过，待确认提交**。1A 和格式修复已分别提交为 `d6a1888`、`39ef91f`；1B 证据见 [1B 报告](PLAYER_BRIDGE_1B_REPORT.md)，1A 历史证据见 [1A 报告](PLAYER_BRIDGE_1A_REPORT.md)。
+本文件保留 `80f04d6` 提交的历史源码核查基线，下面 Player 源码章节及版本列表描述该冻结基线。当前集成状态（2026-11-17）：**1A、1B 已完成并推送**；当前 Utae 开发基线为 `5fc32044`，checks #4、demo #4 成功（用户确认）。1C 本地加载增量、真实歌曲包桌面证据及剩余限制见下文。1A 和格式修复已分别提交为 `d6a1888`、`39ef91f`；1B 证据见 [1B 报告](PLAYER_BRIDGE_1B_REPORT.md)，1A 历史证据见 [1A 报告](PLAYER_BRIDGE_1A_REPORT.md)。
 
 - Player 本地路径：`C:\Users\hj\Projects\utae`。
-- Player HEAD：`80f04d69070b0816d2c8335e1b782df2f2dd7e13`，其上游基线为 `15bb3bb7dd05430af18120bfbc1ef2558322308b`。
+- 原核查 Player HEAD：`80f04d69070b0816d2c8335e1b782df2f2dd7e13`，其上游基线为 `15bb3bb7dd05430af18120bfbc1ef2558322308b`。
 - Player 当前分支：`main`，remote：`git@github.com:augrottooo/Utae.git`。
 - Player 声明：Node >=24、Python >=3.12、包版本 0.1.0、歌曲包 schema 1 / format revision 1.0.0。
-- Schema 文件对比：当前 Player HEAD `80f04d69070b0816d2c8335e1b782df2f2dd7e13` 与上游基线 `15bb3bb7dd05430af18120bfbc1ef2558322308b` 的 `docs/data-format.md`、`lyric_player/schema.py`、`format-version.json` 一致；只确认了这些 schema 契约文件，不代表两提交的全部代码/fixture 相同。Utae 当前映射以实际使用的 Player HEAD 为准，后续版本变化时重新对比。
+- Schema 文件对比：原核查 Player HEAD `80f04d69070b0816d2c8335e1b782df2f2dd7e13` 与上游基线 `15bb3bb7dd05430af18120bfbc1ef2558322308b` 的 `docs/data-format.md`、`lyric_player/schema.py`、`format-version.json` 一致；只确认了这些 schema 契约文件，不代表两提交的全部代码/fixture 相同。Utae 当前映射以实际使用的 Player HEAD 为准，后续版本变化时重新对比。
 - Studio 当前核查基线：`b63633f5381a582e851a953409583c4679b098c5`（`main`，2026-10-20，提交“增加Nanami三档读音合成和词时间记录”）。该 commit 来自 GitHub API 和源码读取，不代表本地已安装或运行。
 
 ## 1B 集成增量
@@ -17,9 +17,15 @@
 
 本轮未修改上游音频核心或 schema。类型、前端 9/9、JS 17/17、Python 7/7、格式、ESLint 和构建通过；用户确认页面、路由、刷新及相关功能正常。既有缓存/后台下载的清理边界保持原语义，过期会话不能重新挂载；没有增加多实例支持、后台任务全量取消或 Studio 运行证据。
 
+## 1C 本地包加载增量
+
+只增加 Utae TypeScript 适配层的运行时校验、加载/资源预检与资产准备检查；`web/src/audio/`、`player.js`、Python schema/build 和 format-version 原位且未改。公开 catalog 由 Python build 生成，源包的 chunks 移到 catalog 顶层、资源改为 20 位 SHA-256 前缀文件名；1C 以该实际输出为输入，保留歌词、罗马音和时间轴。
+
+项目 `data/songs/` 仍仅有 `demo` 合成音包，其跨语言构建核对通过。本轮另外从 README 链接的 Sorane 上游公开演示取得 STRiNGS 公开构建包，在隔离目录核对 403 个资产哈希和 Python/TS 契约，并使用当前 React Host 完成桌面播放、变速、循环、朗读、路由与资源恢复验证。原始 Studio 源包/复核报告没有提供，未运行 Studio 或模型；完整听审与移动设备仍未覆盖，详见 [1C 报告](PLAYER_BRIDGE_1C_REPORT.md)。
+
 ## Player 源码确认
 
-当前新仓库的顶层结构是 `web/`、`lyric_player/`、`server/`、`examples/`、`tests/` 和 `docs/`，并由 `package.json`、`pyproject.toml`、`compose.yaml` 和 `Dockerfile` 提供开发/预览入口。这里没有 React、Vue、Java 或业务数据库目录。
+当前新仓库的顶层结构是 `web/`、`lyric_player/`、`server/`、`examples/`、`tests/` 和 `docs/`，并由 `package.json`、`pyproject.toml`、`compose.yaml` 和 `Dockerfile` 提供开发/预览入口。此处描述冻结核查基线；1B 已新增 React 的 `apps/web` 和 `packages/player-bridge`，当前仍没有 Java 或业务数据库实现。
 
 ### 加载和构建
 

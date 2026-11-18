@@ -1,10 +1,9 @@
 import type { Catalog, ReadSpeed } from './types.ts';
+import { validateCatalog } from './validate.ts';
 
 /** Rebase the actual build output, including chunk lookup keys and stereo parts. */
-export function rebaseCatalog(input: Catalog, catalogUrl: string): Catalog {
-  if (input?.schemaVersion !== 1 || !Array.isArray(input.songs) || !input.songs.length) {
-    throw new TypeError('需要非空的 Sorane schema 1 曲库。请先运行原有 build。');
-  }
+export function rebaseCatalog(input: unknown, catalogUrl: string): Catalog {
+  validateCatalog(input);
   const base = new URL('.', catalogUrl);
   const asset = (src: string) => {
     const url = new URL(src, base);

@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from 'react';
 import { Link, Route, Routes, useParams } from 'react-router-dom';
-import { useLocalCatalog } from './catalog';
+import { useLocalCatalog, useSongAssets } from './catalog';
 import { SoranePlayerHost } from './player/SoranePlayerHost';
 
 class PlayerErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -25,8 +25,8 @@ function LocalEntry() {
   return (
     <section className="entry">
       <h1>从一首歌开始精听</h1>
-      <p>本地歌曲包入口 · 1B 宿主验证</p>
-      <p>当前仅加载本机已有的 Sorane 构建结果。合成音示例用于验证播放与歌词同步。</p>
+      <p>本地歌曲目录</p>
+      <p>选择已准备的歌曲开始练习。音频、歌词与读音来自同一个歌曲包。</p>
       {query.isPending && <p role="status">正在读取本地歌曲包…</p>}
       {query.error && (
         <div role="alert">
@@ -34,6 +34,7 @@ function LocalEntry() {
           <button onClick={() => void query.refetch()}>重试加载</button>
         </div>
       )}
+      {query.data?.songs.length === 0 && <p role="status">本地曲库暂无歌曲。</p>}
       {query.data && (
         <ul>
           {query.data.songs.map((song) => (
@@ -52,6 +53,7 @@ function LocalEntry() {
 function PracticePage() {
   const { songId } = useParams();
   const query = useLocalCatalog();
+  const assets = useSongAssets(query.data, songId);
   if (query.isPending)
     return (
       <p className="entry" role="status">
@@ -74,13 +76,27 @@ function PracticePage() {
     );
   return (
     <>
-      <header className="practice-heading">
-        <h1>{song.title}</h1>
-        <span>{song.artist}</span>
-      </header>
-      <PlayerErrorBoundary key={song.id}>
-        <SoranePlayerHost catalog={query.data} songId={song.id} />
-      </PlayerErrorBoundary>
+      {assets.isPending || assets.isFetching ? (
+        <p className="entry" role="status">
+          正在检查歌曲资源…
+        </p>
+      ) : assets.error ? (
+        <section className="entry" role="alert">
+          <p>{assets.error.message}</p>
+          <button onClick={() => void assets.refetch()}>重试歌曲加载</button>
+          <Link to="/">返回歌曲目录</Link>
+        </section>
+      ) : (
+        <>
+          <header className="practice-heading">
+            <h1>{song.title}</h1>
+            <span>{song.artist}</span>
+          </header>
+          <PlayerErrorBoundary key={song.id}>
+            <SoranePlayerHost catalog={query.data} songId={song.id} />
+          </PlayerErrorBoundary>
+        </>
+      )}
     </>
   );
 }
