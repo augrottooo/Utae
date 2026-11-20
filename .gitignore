@@ -19,3 +19,7 @@ Thumbs.db
 /apps/web/public/sorane/
 /.npm-cache/
 **/node_modules/
+
+# Java business API generated files; local assets and credentials stay outside Git.
+/backend/target/
+/backend/var/

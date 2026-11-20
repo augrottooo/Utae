@@ -5,6 +5,11 @@ export default defineConfig({
   plugins: [react()],
   resolve: { dedupe: ['react', 'react-dom'] },
   // npm workspaces keeps the retained web/src imports inside Vite's workspace root.
-  server: { host: '127.0.0.1', port: 5173, strictPort: true },
+  server: {
+    host: '127.0.0.1',
+    port: 5173,
+    strictPort: true,
+    proxy: { '/api': { target: process.env.UTAE_API_ORIGIN || 'http://127.0.0.1:8080' } },
+  },
   preview: { host: '127.0.0.1', port: 5173, strictPort: true },
 });

@@ -4,7 +4,7 @@ Utae 是面向日语歌曲精听与发音练习的工具，以 [Sorane Player](h
 
 当前仓库保留上游播放器、构建工具、文档、Git 历史及版权声明。上游基线为 `15bb3bb7dd05430af18120bfbc1ef2558322308b`；仓库切换与版本信息见 [切换记录](docs/utae-repository-switch.md)。
 
-本地目录为 `C:\Users\hj\Projects\utae`。当前提供歌曲包播放、已验收的 Bridge 1A 原型和 React 宿主 1B。1A、1B 已推送，checks #4、demo #4 及 1B 用户实际浏览器验收通过（用户确认）。本轮 1C 完善本地歌曲包的校验、资源准备与错误恢复；真实公开演示包的桌面加载、播放和恢复验证已通过，完整逐词听审与移动设备矩阵另行记录。用户上传、Java 后端、学习记录与 Agent 属于后续规划。旧版仓库不作为当前开发来源，禁止访问。
+本地目录为 `C:\Users\hj\Projects\utae`。1A、1B、1C 与阶段 2 已推送；1B 用户实际浏览器验收通过（用户确认），1C 真实公开演示包桌面播放与恢复已验证。当前仓库正在实施阶段 3 Java 业务 API：API、MySQL 迁移和前端 API 候选已落地，真实 MySQL/Flyway 及持久化资产端到端验收仍待专用测试库和真实数据。详见 [阶段 3 报告](docs/utae/STAGE3_REPORT.md)。旧版仓库不作为当前开发来源，禁止访问。
 
 以下保留上游使用说明；其中 Sorane 演示链接指向上游站点，运行示例按上游目录名称书写。本地使用时进入当前 Utae 目录。歌曲制作由独立的 Sorane Studio 负责。
 
@@ -114,6 +114,7 @@ npm run dev --workspace @utae/web -- --host 127.0.0.1 --port 5174 --strictPort
 - [PlayerBridge 方案](docs/utae/PLAYER_BRIDGE.md)
 - [1A 原型实施记录与生命周期验收](docs/utae/PLAYER_BRIDGE_1A_REPORT.md)
 - [歌曲包与 API](docs/utae/API_AND_MANIFEST.md)
+- [阶段 3 Java API 实施与验收状态](docs/utae/STAGE3_REPORT.md)
 - [数据模型](docs/utae/DATABASE.md)
 - [制作 Pipeline](docs/utae/PROCESSING_PIPELINE.md)
 - [认证与授权](docs/utae/AUTHORIZATION.md)
@@ -127,4 +128,4 @@ npm run dev --workspace @utae/web -- --host 127.0.0.1 --port 5174 --strictPort
 
 ## 阶段 2 页面候选
 
-本地未提交候选已提供曲库（`/`、`/library`）、搜索、歌曲详情、练习、我的歌曲、提交歌曲和模拟任务页面。模拟登录只切换演示界面状态；任务仅保存本标签页元数据，刷新可恢复，不上传音频、不运行 Studio，也没有真实账户或业务 API。现有播放器收藏仍为本机存储。页面继续使用上述 React 启动与构建命令；详细边界和测试见 [阶段 2 报告](docs/utae/FRONTEND_STAGE2_REPORT.md)。当前 GitHub Pages 继续部署上游演示，不代表这些 React 页面已在线发布。
+阶段 2 的曲库、搜索、详情、练习与路由页面已推送；生产入口正接入阶段 3 的 Cookie 会话和业务 API。上传与任务处理仍是后续阶段，不会显示为已成功创建的后台任务。阶段 2 基础设计记录见 [阶段 2 报告](docs/utae/FRONTEND_STAGE2_REPORT.md)。当前 GitHub Pages 继续部署上游演示，不代表 React 页面或 Java API 已在线发布。

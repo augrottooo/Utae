@@ -1,0 +1,10 @@
+# Explicit development profile only. Production keeps Secure cookies enabled.
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false
+utae:
+  storage:
+    mode: ${UTAE_STORAGE_MODE:minio}
+    root: ${UTAE_ASSET_ROOT:./var/assets}

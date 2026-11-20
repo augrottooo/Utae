@@ -4,6 +4,7 @@ export type * from './types.ts';
 export { rebaseCatalog } from './catalog.ts';
 export { validateCatalog, songAssets } from './validate.ts';
 export { loadCatalog, checkSongAssets } from './load.ts';
+export { apiCatalog } from './api-catalog.ts';
 
 export interface PlayerSession {
   bridge: PlayerBridge;
@@ -14,7 +15,34 @@ export interface PlayerSession {
 
 // The retained fixed IDs/global styles permit one player host per document.
 const activeHosts = new WeakMap<Document, HTMLElement>();
-const createBridge: BridgeFactory = (options) => createPlayerBridge(options) as PlayerBridge;
+const createBridge: BridgeFactory = (options) => {
+  const protectedAudio = Object.values(options.catalog.songs[0].audio).some((entry) =>
+    new URL(entry.src, location.href).pathname.startsWith('/api/assets/'),
+  );
+  return createPlayerBridge({
+    ...options,
+    ...(protectedAudio ? { cache: createAuthorizedAudioCache() } : {}),
+  }) as PlayerBridge;
+};
+
+/** Authorized audio stays in the current decoder session, never Cache Storage. */
+export function createAuthorizedAudioCache() {
+  return {
+    async get(src: string) {
+      const response = await fetch(src, { credentials: 'include', cache: 'no-store' });
+      if (!response.ok) throw new Error(`音频访问失败（HTTP ${response.status}）。`);
+      return response;
+    },
+    async playable(src: string) {
+      const response = await this.get(src);
+      const url = URL.createObjectURL(await response.blob());
+      return { url, release: () => URL.revokeObjectURL(url) };
+    },
+    persist: async () => false,
+    invalidate: async () => {},
+    getDiagnostics: async () => ({ storedFiles: 0, bytes: 0, persistent: false }),
+  };
+}
 
 export function mountPlayerHost(
   {

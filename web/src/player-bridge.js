@@ -5,11 +5,11 @@ import { createPlayer } from './player.js';
 import { observeLyrics } from './layout.js';
 
 /** 1A catalog boundary. Input is the existing build's library.json, not a Utae API DTO. */
-export function createPlayerBridge({ catalog, root = document, songId }) {
+export function createPlayerBridge({ catalog, root = document, songId, cache: suppliedCache }) {
   if (catalog?.schemaVersion !== 1 || !Array.isArray(catalog.songs) || !catalog.songs.length) {
     throw new TypeError('A nonempty Sorane schema 1 catalog is required');
   }
-  const cache = createAudioCache();
+  const cache = suppliedCache || createAudioCache();
   const decoder = createChunkedAudio({
     cache,
     decoder: createDecoder(cache),
