@@ -1,6 +1,6 @@
 # 阶段 3 实施记录
 
-状态（2026-11-20）：**API 与前端接入候选已实现；代码级回归通过，真实 MySQL/Flyway 与真实资产端到端验收待专用环境执行**。本轮未提交或推送。
+状态（2026-11-24）：阶段 3 实现已推送（`55719be`），checks #6 和 demo #6 已通过。**隔离 MySQL 8.0.36 迁移、HTTP + MinIO 和浏览器真实 API 播放验收已通过**。真实 HTTP 请求发现 MyBatis 对 record 查询结果的映射问题，已通过显式构造器参数映射修复。
 
 ## 已实现
 
@@ -19,19 +19,22 @@
 - Java 21/Spring Boot 单元测试 12 项通过，包含身份/CSRF MockMvc、用户范围拒绝、Manifest 映射、Range 与资产控制器测试。
 - 上游 JavaScript 测试 18 项、Python 回归 7 项通过。Python 使用显式 Miniconda 路径运行；默认 WindowsApps `python.exe` launcher 无法启动。
 - React/Vite production build 通过，生成 119 modules。
-- `mvn -Pmysql-it verify` 已执行；12 个单测通过，真实 MySQL migration 测试因未配置专用数据库而跳过 1 项。
-- 新增 `backend/stage3-acceptance.ps1`：在专用 schema、MinIO bucket、API fixture 和测试账号均显式配置后，串行执行 Flyway opt-in、CSRF/session、目录/详情/版本、共享/私人隔离、Manifest object key 隐藏、MinIO-backed GET/HEAD 和 Range 验收；缺少或非专用配置时在连接前拒绝，脚本不创建或清理资源。
+- 在回环端口 `13306` 和独立数据目录启动临时 MySQL 8.0.36，运行 `backend/stage3-migrate.ps1`。Flyway 从空 schema 应用并验证 V1；八张业务表、Flyway 历史表、八条限制性外键、主要索引及启用的 CHECK 约束通过核对。12 项 Java 单测和 1 项真实 MySQL 集成测试通过，未跳过。验收后关闭临时实例。
+- 验收分为两个独立入口：`backend/stage3-migrate.ps1` 只迁移隔离的空 MySQL schema 并核验数据库结构；`backend/stage3-acceptance.ps1` 只访问已导入测试数据的隔离 HTTP API，并核对测试 WAV 的 SHA-256、HEAD 和 Range 字节。两者都不清理或删除数据。
+- 2026-11-23：独立实例 `127.0.0.1:13306/utae_stage3_test` 的 Flyway V1 实际执行成功；后续只读核验确认 8 张业务表、8 条外键、索引及 10 条 enforced CHECK 约束。验证命令退出码为 0。验收使用独立数据目录，没有连接业务 MySQL。
+- 2026-11-24：普通 Windows PowerShell 使用 JDK 21.0.13 执行 `maven-clean-plugin:3.5.0:clean package`，19 个主源码、7 个测试源码重新编译，12 项单元测试通过，`BUILD SUCCESS`。新 JAR 中 `CatalogMapper` 包含显式 Asset/Song/Version record 构造映射。
+- 2026-11-24：现有 `backend/stage3-acceptance.ps1` 对隔离 API、MySQL 和 MinIO fixture 实际通过，退出码 0。覆盖 CSRF、独立 Alice/Bob session、共享/私人访问、Manifest 版本绑定和隐私字段检查、音频 GET/SHA-256、HEAD、Range、错误版本和越权拒绝。该脚本不执行 Flyway。
 - Ruff 不适用于本阶段 Java/TypeScript 代码；本阶段 TypeScript lint 使用现有 ESLint 配置及 `typescript-eslint`。
 
-## 未完成验收与边界
+## 边界与未完成事项
 
-- 当前环境没有 `UTAE_TEST_DB_URL`、测试凭据或 MySQL 3306 listener；Flyway migration 与 mapper SQL **尚未在真实 MySQL 执行**。`mvn -Pmysql-it verify` 限制到专用 `utae_stage3_test`，要求先独立准备空测试 schema。
-- 本机存在正在运行的 MySQL Windows 服务，但未连接或读取其业务数据；由于没有专用 schema 凭据，真实迁移仍保持未执行。MinIO 客户端/服务和 `UTAE_MINIO_*` 均未配置。
-- 尚无真实用户/公开版本数据和对象存储资产，因此尚未完成浏览器到 MySQL/MinIO 的端到端播放。此前 1B 浏览器验收不代表该新 API 链路已人工验证。
+- 早期 HTTP 失败日志保留在验收目录中，原因是旧 JAR 的 record 映射错位；随机前缀对象及测试行保留在专用测试资源中，没有执行清理或重建。
+- 授权失败路径已由 HTTP + MinIO 自动化验收覆盖；浏览器中未重复登录 Bob 手测私有歌曲拒绝。此前 1B 浏览器验收不作为本阶段真实 API 播放证据。
+- 2026-11-24 浏览器真实 API 播放验收已完成：Windows 10 的 ChatGPT in-app browser 通过 Vite `http://127.0.0.1:5174` 连接隔离 API `http://127.0.0.1:18080`，Alice 登录成功；共享歌曲和 Alice 私有歌曲均加载真实 schema-1 Manifest、歌词与 romaji token。共享歌曲播放器实际从播放切换到暂停，transport 时间从 0.0 秒推进到约 0.5 秒，暂停后停止推进，进度条 seek 可更新；Alice 私有歌曲也实际从播放切换到暂停并推进到约 0.1 秒。验收中发现临时 fixture 的 `ruby` 错误写成空字符串，已仅在隔离 `utae_stage3_test` 的两条版本快照中修正为合法 schema-1 数组，未修改应用代码、生产数据或对象存储。
+- Bob 浏览器私有歌曲拒绝未重复手测；Bob 越权、匿名拒绝及 GET/HEAD/Range 已由 HTTP + MinIO 验收脚本退出码 0 覆盖。
 - 版本 JSON 快照用于 schema 1 原样播放映射；normalized lyric 表已建，但离线包导入/生产导入流程与数据 backfill 不在本阶段启用。
-- V1 迁移已统一声明 `DEFAULT CHARSET=utf8mb4`，但仍需在专用 MySQL 8.0.16+ 空 schema 实际运行后，才能确认 JSON/CHECK/复合外键兼容并把迁移标为通过。
 - 上传、input revision、候选制作、队列、Studio Worker、Review/Publish 写 API 与 UI 明确留在 4A/4B；本轮没有伪造任务或上传成功状态。
 
 ## 真实验收准备
 
-真实 MySQL/MinIO 验收必须使用隔离资源：空的 `utae_stage3_test` schema、专用数据库用户、专用 MinIO bucket 和小型 WAV fixture。先设置 `UTAE_TEST_DB_URL`、`UTAE_TEST_DB_USER`、`UTAE_TEST_DB_PASSWORD`，运行 `mvn -Pmysql-it verify`；测试会在迁移前确认 MySQL 版本并拒绝非预期表集合。随后按 `backend/README.md` 的 fixture 步骤插入两个用户、一首共享歌曲、一首由 `alice` 拥有的私有歌曲、一个 schema-1 已发布版本及其音频资产映射，启动 `dev` profile 验证 CSRF 登录、Manifest 隐藏 object key、共享/私有授权、GET/HEAD 和单 Range 响应。当前环境未配置这些资源，因此本轮没有声称真实 MySQL/MinIO 通过。
+按 [后端验收说明](../../backend/README.md#isolated-mysql--minio-acceptance) 先执行 A，确认 Flyway 能从空库迁移；再向同一测试库和专用 bucket 导入 Alice/Bob、共享/私人歌曲、已发布版本及 WAV，运行 B。B 可用同一批测试数据反复执行。最后通过 Vite 连接同一个测试 API 做真实浏览器播放验收。

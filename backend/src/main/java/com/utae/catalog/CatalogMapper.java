@@ -1,6 +1,8 @@
 package com.utae.catalog;
 
 import java.util.List;
+import org.apache.ibatis.annotations.Arg;
+import org.apache.ibatis.annotations.ConstructorArgs;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 import static com.utae.catalog.Rows.*;
@@ -17,23 +19,79 @@ public interface CatalogMapper {
 
     @Select("<script>SELECT s.id,s.title,s.artist,s.duration_ms,s.visibility,s.lifecycle_status,s.current_published_version_id FROM song s WHERE "
         + VISIBLE + FILTER + " ORDER BY s.id LIMIT #{size} OFFSET #{offset}</script>")
+    @ConstructorArgs({
+        @Arg(column = "id", javaType = String.class, id = true),
+        @Arg(column = "title", javaType = String.class),
+        @Arg(column = "artist", javaType = String.class),
+        @Arg(column = "duration_ms", javaType = long.class),
+        @Arg(column = "visibility", javaType = String.class),
+        @Arg(column = "lifecycle_status", javaType = String.class),
+        @Arg(column = "current_published_version_id", javaType = String.class)
+    })
     List<SongRow> list(String userId, String scope, String keyword, int size, long offset);
 
     @Select("<script>SELECT COUNT(*) FROM song s WHERE " + VISIBLE + FILTER + "</script>")
     long count(String userId, String scope, String keyword);
 
+    @ConstructorArgs({
+        @Arg(column = "id", javaType = String.class, id = true),
+        @Arg(column = "title", javaType = String.class),
+        @Arg(column = "artist", javaType = String.class),
+        @Arg(column = "duration_ms", javaType = long.class),
+        @Arg(column = "visibility", javaType = String.class),
+        @Arg(column = "lifecycle_status", javaType = String.class),
+        @Arg(column = "current_published_version_id", javaType = String.class)
+    })
     @Select("SELECT s.id,s.title,s.artist,s.duration_ms,s.visibility,s.lifecycle_status,s.current_published_version_id FROM song s WHERE s.id=#{songId} AND " + VISIBLE)
     SongRow song(String songId, String userId);
 
-    @Select("SELECT v.* FROM song_package_version v JOIN song s ON s.id=v.song_id WHERE s.id=#{songId} AND v.status='PUBLISHED' AND " + VISIBLE + " ORDER BY v.published_at DESC,v.id")
+    @ConstructorArgs({
+        @Arg(column = "id", javaType = String.class, id = true),
+        @Arg(column = "song_id", javaType = String.class),
+        @Arg(column = "package_version", javaType = String.class),
+        @Arg(column = "schema_version", javaType = int.class),
+        @Arg(column = "status", javaType = String.class),
+        @Arg(column = "manifest_json", javaType = String.class),
+        @Arg(column = "sha256", javaType = String.class),
+        @Arg(column = "published_at", javaType = java.time.LocalDateTime.class)
+    })
+    @Select("SELECT v.id,v.song_id,v.package_version,v.schema_version,v.status,v.manifest_json,v.sha256,v.published_at FROM song_package_version v JOIN song s ON s.id=v.song_id WHERE s.id=#{songId} AND v.status='PUBLISHED' AND " + VISIBLE + " ORDER BY v.published_at DESC,v.id")
     List<VersionRow> versions(String songId, String userId);
 
-    @Select("SELECT v.* FROM song_package_version v JOIN song s ON s.id=v.song_id WHERE s.id=#{songId} AND v.id=#{versionId} AND v.status='PUBLISHED' AND " + VISIBLE)
+    @ConstructorArgs({
+        @Arg(column = "id", javaType = String.class, id = true),
+        @Arg(column = "song_id", javaType = String.class),
+        @Arg(column = "package_version", javaType = String.class),
+        @Arg(column = "schema_version", javaType = int.class),
+        @Arg(column = "status", javaType = String.class),
+        @Arg(column = "manifest_json", javaType = String.class),
+        @Arg(column = "sha256", javaType = String.class),
+        @Arg(column = "published_at", javaType = java.time.LocalDateTime.class)
+    })
+    @Select("SELECT v.id,v.song_id,v.package_version,v.schema_version,v.status,v.manifest_json,v.sha256,v.published_at FROM song_package_version v JOIN song s ON s.id=v.song_id WHERE s.id=#{songId} AND v.id=#{versionId} AND v.status='PUBLISHED' AND " + VISIBLE)
     VersionRow version(String songId, String versionId, String userId);
 
-    @Select("SELECT a.*,p.source_path,p.role FROM stored_asset a JOIN package_version_asset p ON p.asset_id=a.id JOIN song_package_version v ON v.id=p.version_id JOIN song s ON s.id=v.song_id WHERE v.id=#{versionId} AND s.id=#{songId} AND v.status='PUBLISHED' AND " + VISIBLE)
+    @ConstructorArgs({
+        @Arg(column = "asset_id", javaType = String.class, id = true),
+        @Arg(column = "asset_object_key", javaType = String.class),
+        @Arg(column = "asset_sha256", javaType = String.class),
+        @Arg(column = "asset_size_bytes", javaType = long.class),
+        @Arg(column = "asset_media_type", javaType = String.class),
+        @Arg(column = "asset_source_path", javaType = String.class),
+        @Arg(column = "asset_role", javaType = String.class)
+    })
+    @Select("SELECT a.id AS asset_id,a.object_key AS asset_object_key,a.sha256 AS asset_sha256,a.size_bytes AS asset_size_bytes,a.media_type AS asset_media_type,p.source_path AS asset_source_path,p.role AS asset_role FROM stored_asset a JOIN package_version_asset p ON p.asset_id=a.id JOIN song_package_version v ON v.id=p.version_id JOIN song s ON s.id=v.song_id WHERE v.id=#{versionId} AND s.id=#{songId} AND v.status='PUBLISHED' AND " + VISIBLE)
     List<AssetRow> assets(String songId, String versionId, String userId);
 
-    @Select("SELECT a.*,p.source_path,p.role FROM stored_asset a JOIN package_version_asset p ON p.asset_id=a.id JOIN song_package_version v ON v.id=p.version_id JOIN song s ON s.id=v.song_id WHERE a.id=#{assetId} AND v.id=#{versionId} AND v.status='PUBLISHED' AND " + VISIBLE + " LIMIT 1")
+    @ConstructorArgs({
+        @Arg(column = "asset_id", javaType = String.class, id = true),
+        @Arg(column = "asset_object_key", javaType = String.class),
+        @Arg(column = "asset_sha256", javaType = String.class),
+        @Arg(column = "asset_size_bytes", javaType = long.class),
+        @Arg(column = "asset_media_type", javaType = String.class),
+        @Arg(column = "asset_source_path", javaType = String.class),
+        @Arg(column = "asset_role", javaType = String.class)
+    })
+    @Select("SELECT a.id AS asset_id,a.object_key AS asset_object_key,a.sha256 AS asset_sha256,a.size_bytes AS asset_size_bytes,a.media_type AS asset_media_type,p.source_path AS asset_source_path,p.role AS asset_role FROM stored_asset a JOIN package_version_asset p ON p.asset_id=a.id JOIN song_package_version v ON v.id=p.version_id JOIN song s ON s.id=v.song_id WHERE a.id=#{assetId} AND v.id=#{versionId} AND v.status='PUBLISHED' AND " + VISIBLE + " LIMIT 1")
     AssetRow asset(String assetId, String versionId, String userId);
 }

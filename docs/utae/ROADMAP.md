@@ -2,7 +2,7 @@
 
 本路线图定义实施顺序、依赖和阶段验收，不承诺全部 MVP 在一周内完成。第一轮实现之后的一周调试、复查和验收时间盒见 [ONE_WEEK_PLAN.md](ONE_WEEK_PLAN.md)，它不重复本文件的开发计划。
 
-当前状态（2026-11-18）：阶段 **1A、1B、1C 与阶段 2 已推送**。1B 用户浏览器验收通过（用户确认）；1C 公开 STRiNGS 包桌面功能验证通过，完整逐词听审和移动设备矩阵仍待验证。本轮阶段 3 已实现 Java API/前端接入候选，但真实 MySQL migration 与 API 到持久化资产的端到端验收尚未完成；详见 [阶段 3 报告](STAGE3_REPORT.md)。
+当前状态（2026-11-24）：阶段 **1A、1B、1C、阶段 2 与阶段 3 已推送**。1B 用户浏览器验收通过（用户确认）；1C 公开 STRiNGS 包桌面功能验证通过，完整逐词听审和移动设备矩阵仍待验证。阶段 3 的隔离 MySQL/Flyway、MinIO、HTTP 和浏览器真实 API 播放验收已通过；下一步推进阶段 4A 单曲 Studio Adapter 与人工门禁。详见 [阶段 3 报告](STAGE3_REPORT.md) 和 [4A 离线预检报告](STAGE4A_OFFLINE_REPORT.md)。
 
 ## 阶段 0：方案审核和源码基线
 
@@ -63,7 +63,7 @@
 
 ## 阶段 3：Java 业务 API 与基础数据
 
-状态（2026-11-18）：API、迁移和前端接入候选已在本地实现；Java、前端单测通过。真实 MySQL/Flyway 和持久化资产验收待独立测试 schema 与真实包导入数据准备后完成。限制和报告见 [STAGE3_REPORT.md](STAGE3_REPORT.md)。
+状态（2026-11-24）：API、迁移和前端接入已完成并通过隔离 MySQL/Flyway、MinIO、HTTP 和浏览器真实 API 播放验收。限制和报告见 [STAGE3_REPORT.md](STAGE3_REPORT.md)；真实业务导入、上传和制作仍留在阶段 4A/4B。
 
 依赖：阶段 2 DTO/API 契约稳定。
 
